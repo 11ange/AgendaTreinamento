@@ -42,15 +42,16 @@ Antes de criar qualquer coisa, pense nos dados que você precisa armazenar e com
 
 * **`Pacientes`:**
     * `id` (gerado automaticamente)
-    * `nome`
-    * `telefone`
-    * `email`
-    * `observacoes`
+    * `nome` (string)
+    * `telefone` (inteiro)
+    * `email` (string)
+    * `observacoes` (string)
+    * afinandoCerebro (string - ex: Enviado, Aceito, ...)
 * **`Disponibilidade` (Slots Fixos que você oferece):**
     * `id`
-    * `diaDaSemana` (ex: "Segunda", "Terça")
-    * `horaInicio` (ex: "09:00")
-    * `horaFim` (ex: "09:30")
+    * `diaDaSemana` (string - ex: "Segunda", "Terça")
+    * `horaInicio` (inteiro - número total de minutos desde a meia-noite - ex: 540 = 09:00)
+    * `horaFim` (inteiro - ex: 570 = 09:30)
     * `ativa` (booleano)
 * **`Agendamentos` (Uma série de 10 sessões para um paciente):**
     * `id`
