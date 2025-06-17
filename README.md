@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 Excelente escolha! A abordagem de um Web App é realmente estratégica para o seu cenário, pois contorna a necessidade de instalações locais e oferece muita flexibilidade.
 
 Vamos começar dividindo o projeto em fases, com foco nas decisões e passos iniciais:
@@ -169,3 +170,21 @@ Comece com as partes mais simples e avance para as mais complexas.
 ---
 
 Este é um roteiro detalhado. O ponto de partida é realmente a escolha e configuração do backend (Firebase é uma aposta segura) e o setup do seu ambiente de desenvolvimento na nuvem. Boa sorte!
+=======
+# agenda_treinamento_web
+
+flutter run -d web-server
+
+## Getting Started
+
+This project is a starting point for a Flutter application.
+
+A few resources to get you started if this is your first Flutter project:
+
+- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
+- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+
+For help getting started with Flutter development, view the
+[online documentation](https://docs.flutter.dev/), which offers tutorials,
+samples, guidance on mobile development, and a full API reference.
+>>>>>>> abe030a (Inicial)
