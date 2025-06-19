@@ -135,10 +135,13 @@ class _AgendaSemanalPageState extends State<AgendaSemanalPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Definir Horários da Agenda'),
-        centerTitle: true,
-        backgroundColor: Colors.blue, // Cor de fundo da AppBar
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(45.0), 
+        child: AppBar(
+          title: const Text('Horários de Atendimento'),
+          centerTitle: true,
+          backgroundColor: Colors.blue, // Cor de fundo da AppBar
+        ),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),

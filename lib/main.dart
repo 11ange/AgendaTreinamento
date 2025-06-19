@@ -55,10 +55,13 @@ class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Agenda de Treinamento'),
-        centerTitle: true, // Centraliza o título da AppBar
-        backgroundColor: Colors.blue, // Cor de fundo da AppBar
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(45.0), 
+        child: AppBar(
+          title: const Text('Agenda de Treinamento'),
+          centerTitle: true,
+          backgroundColor: Colors.blue, // Cor de fundo da AppBar
+        ),
       ),
       body: Center( // Centraliza o conteúdo na tela
         child: Container(

@@ -82,86 +82,41 @@ class FirestoreService {
     }
     await batch.commit();
   }
+  
+  Future<void> desmarcarSessaoUnica(Horario horario, DateTime dia) async {
+    final docId = DateFormat('yyyy-MM-dd').format(dia);
+    final ref = _db.collection(_sessoesAgendadasCollection).doc(docId);
 
-  Future<void> desmarcarSessao(Horario horario, DateTime diaSelecionado) async {
-    final WriteBatch batch = _db.batch();
-    final sessaoAtual = horario.sessaoAgendada;
-    if (sessaoAtual == null) throw Exception("Sessão inválida para desmarcar.");
-
-    List<DocumentSnapshot> sessoesFuturas = await _findAllSessionsAfter(horario, diaSelecionado, includeCurrent: true);
-    if (sessoesFuturas.isEmpty) throw Exception("Nenhuma sessão futura encontrada para reagendar.");
-
-    final docIdAtual = DateFormat('yyyy-MM-dd').format(diaSelecionado);
-    final refAtual = _db.collection(_sessoesAgendadasCollection).doc(docIdAtual);
-    batch.update(refAtual, {
-        'sessoes.${horario.hora}.status': 'Desmarcada',
-        'sessoes.${horario.hora}.desmarcadaEm': Timestamp.now(),
+    await ref.update({
+      'sessoes.${horario.hora}.status': 'Desmarcada',
+      'sessoes.${horario.hora}.desmarcadaEm': Timestamp.now(),
     });
+  }
 
-    for (var doc in sessoesFuturas) {
-        if(doc.id == docIdAtual) continue;
+  Future<void> desmarcarSessoesRestantes(Horario horario, DateTime dia) async {
+    final WriteBatch batch = _db.batch();
+    
+    List<DocumentSnapshot> sessoesParaRemover = await _findAllSessionsAfter(horario, dia, includeCurrent: true);
 
-        final sessoes = doc.data() as Map<String, dynamic>;
-        final sessaoData = sessoes['sessoes'][horario.hora];
-        batch.update(doc.reference, {
-            'sessoes.${horario.hora}.sessaoNumero': sessaoData['sessaoNumero'] - 1,
-            'sessoes.${horario.hora}.reagendada': true,
-        });
+    if (sessoesParaRemover.isEmpty) {
+        final docId = DateFormat('yyyy-MM-dd').format(dia);
+        final ref = _db.collection(_sessoesAgendadasCollection).doc(docId);
+        batch.update(ref, {'sessoes.${horario.hora}': FieldValue.delete()});
+    } else {
+        for (var doc in sessoesParaRemover) {
+            batch.update(doc.reference, {'sessoes.${horario.hora}': FieldValue.delete()});
+        }
     }
-
-    final ultimaSessaoDoc = sessoesFuturas.last;
-    final dataUltimaSessao = DateFormat('yyyy-MM-dd').parse(ultimaSessaoDoc.id);
-    final dataNovaSessao = dataUltimaSessao.add(const Duration(days: 7));
-    final docIdNovo = DateFormat('yyyy-MM-dd').format(dataNovaSessao);
-    final refNova = _db.collection(_sessoesAgendadasCollection).doc(docIdNovo);
-
-    final novaSessao = SessaoAgendada(
-        agendamentoId: sessaoAtual.agendamentoId,
-        agendamentoStartDate: sessaoAtual.agendamentoStartDate,
-        pacienteId: sessaoAtual.pacienteId,
-        pacienteNome: sessaoAtual.pacienteNome,
-        status: 'Agendada',
-        sessaoNumero: sessaoAtual.totalSessoes,
-        totalSessoes: sessaoAtual.totalSessoes,
-        reagendada: true,
-    );
-    batch.set(refNova, {'sessoes': {horario.hora: novaSessao.toMap()}}, SetOptions(merge: true));
 
     await batch.commit();
   }
+
 
   Future<void> reativarSessao(Horario horario, DateTime diaSelecionado) async {
     final WriteBatch batch = _db.batch();
     final sessaoAtual = horario.sessaoAgendada;
     if (sessaoAtual == null) throw Exception("Sessão inválida para reativação.");
     
-    final List<DocumentSnapshot> todasSessoes = await _findAllSessionsInAgendamento(horario);
-    if (todasSessoes.isEmpty) throw Exception("Nenhuma sessão encontrada para reativar.");
-    
-    todasSessoes.sort((a, b) => a.id.compareTo(b.id));
-    
-    final ultimaSessaoDoc = todasSessoes.last;
-    batch.update(ultimaSessaoDoc.reference, {'sessoes.${horario.hora}': FieldValue.delete()});
-
-    for (final doc in todasSessoes) {
-      if (doc.id == ultimaSessaoDoc.id) continue;
-      final docData = doc.data() as Map<String, dynamic>?;
-      if (docData == null || !docData.containsKey('sessoes')) continue;
-      
-      final sessoes = docData['sessoes'] as Map<String, dynamic>?;
-      if (sessoes == null || !sessoes.containsKey(horario.hora)) continue;
-      
-      final sessaoData = sessoes[horario.hora] as Map<String, dynamic>;
-      final bool foiReagendada = sessaoData['reagendada'] ?? false;
-      
-      if (foiReagendada) {
-          batch.update(doc.reference, {
-              'sessoes.${horario.hora}.sessaoNumero': FieldValue.increment(1),
-              'sessoes.${horario.hora}.reagendada': false,
-          });
-      }
-    }
-
     final refAtual = _db.collection(_sessoesAgendadasCollection).doc(DateFormat('yyyy-MM-dd').format(diaSelecionado));
     batch.update(refAtual, {
       'sessoes.${horario.hora}.status': 'Agendada',
@@ -216,11 +171,21 @@ class FirestoreService {
   Future<List<DocumentSnapshot>> _findAllSessionsAfter(Horario horario, DateTime startDate, {bool includeCurrent = false}) async {
     List<DocumentSnapshot> sessoesEncontradas = [];
     final sessaoAgendada = horario.sessaoAgendada;
-    if (sessaoAgendada?.agendamentoId == null) throw Exception("Dados do agendamento incompletos.");
 
-    DateTime dataBusca = includeCurrent ? startDate : startDate.add(const Duration(days: 7));
+    // *** LINHA CORRIGIDA ***
+    // Se não há uma sessão agendada ou se a sessão não tem um ID de agendamento,
+    // significa que é uma sessão única ou um horário vago. Não há sessões "seguintes".
+    if (sessaoAgendada == null || sessaoAgendada.agendamentoId.isEmpty) {
+      if (includeCurrent && sessaoAgendada != null) {
+        final docId = DateFormat('yyyy-MM-dd').format(startDate);
+        sessoesEncontradas.add(await _db.collection(_sessoesAgendadasCollection).doc(docId).get());
+      }
+      return sessoesEncontradas;
+    }
+
+    DateTime dataBusca = startDate;
     int iteracoes = 0;
-    int maxIteracoes = (sessaoAgendada!.totalSessoes ?? 0) + 52;
+    int maxIteracoes = (sessaoAgendada.totalSessoes) + 52; 
 
     while(iteracoes < maxIteracoes) { 
       final docId = DateFormat('yyyy-MM-dd').format(dataBusca);
@@ -230,7 +195,13 @@ class FirestoreService {
       if(doc.exists && docData != null) {
           final sessoes = docData['sessoes'] as Map<String, dynamic>?;
           if (sessoes != null && sessoes[horario.hora]?['agendamentoId'] == sessaoAgendada.agendamentoId) {
-              sessoesEncontradas.add(doc);
+             if (dataBusca.isAtSameMomentAs(startDate) || dataBusca.isAfter(startDate)) {
+                if(dataBusca.isAtSameMomentAs(startDate) && includeCurrent) {
+                  sessoesEncontradas.add(doc);
+                } else if (dataBusca.isAfter(startDate)) {
+                  sessoesEncontradas.add(doc);
+                }
+             }
           }
       }
       dataBusca = dataBusca.add(const Duration(days: 7));
@@ -243,13 +214,16 @@ class FirestoreService {
   Future<List<DocumentSnapshot>> _findAllSessionsInAgendamento(Horario horario) async {
     List<DocumentSnapshot> sessoesEncontradas = [];
     final sessaoAgendada = horario.sessaoAgendada;
-    if (sessaoAgendada?.agendamentoId == null || sessaoAgendada?.agendamentoStartDate == null) {
+
+    // *** LINHA CORRIGIDA ***
+    // Fazemos uma checagem segura para garantir que sessaoAgendada e seus campos não são nulos.
+    if (sessaoAgendada == null || sessaoAgendada.agendamentoId.isEmpty || sessaoAgendada.agendamentoStartDate == null) {
       throw Exception("Dados do agendamento incompletos para buscar todas as sessões.");
     }
     
-    DateTime dataBusca = sessaoAgendada!.agendamentoStartDate.toDate();
+    DateTime dataBusca = sessaoAgendada.agendamentoStartDate.toDate();
     int iteracoes = 0;
-    int maxIteracoes = (sessaoAgendada.totalSessoes ?? 0) + 104;
+    int maxIteracoes = (sessaoAgendada.totalSessoes) + 104;
     
     while (iteracoes < maxIteracoes) {
       final docId = DateFormat('yyyy-MM-dd').format(dataBusca);

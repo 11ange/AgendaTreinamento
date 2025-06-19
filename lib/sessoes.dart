@@ -7,6 +7,8 @@ import 'dart:async';
 import 'services/firestore_service.dart';
 import 'models/horario_model.dart';
 
+enum DesmarcarOpcao { apenasEsta, todasAsFuturas, cancelar }
+
 class Sessoes extends StatefulWidget {
   const Sessoes({super.key});
 
@@ -104,10 +106,68 @@ class _SessoesState extends State<Sessoes> {
 
   void _reloadDataAfterAction() {
     setState(() {
-      _horarioEmAgendamento = null;
+       _horarioEmAgendamento = null;
     });
     _fetchColorsForMonth(_focusedDay);
     _loadDataForDay(_selectedDay!);
+  }
+
+  Future<void> _handleDesmarcarSessao(Horario horario) async {
+    final opcao = await _showDesmarcarOptionsDialog();
+
+    if (opcao == null || opcao == DesmarcarOpcao.cancelar) {
+      return; 
+    }
+
+    setState(() => _isSaving = true);
+    try {
+      switch (opcao) {
+        case DesmarcarOpcao.apenasEsta:
+          await _firestoreService.desmarcarSessaoUnica(horario, _selectedDay!);
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Sessão desmarcada com sucesso!')));
+          break;
+        case DesmarcarOpcao.todasAsFuturas:
+          await _firestoreService.desmarcarSessoesRestantes(horario, _selectedDay!);
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Sessão atual e futuras foram removidas!')));
+          break;
+        case DesmarcarOpcao.cancelar:
+          break;
+      }
+      _reloadDataAfterAction();
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erro ao desmarcar: ${e.toString()}')));
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
+  }
+
+  Future<void> _handleBloquearHorario(String hora, {bool desmarcando = false}) async {
+    if (desmarcando) {
+        final confirmar = await _showConfirmationDialog("Bloquear e Desmarcar?", "Esta ação irá desmarcar a sessão e bloquear o horário. Deseja continuar?");
+        if (confirmar != true) return;
+    }
+    setState(() => _isSaving = true);
+    try {
+      await _firestoreService.bloquearHorario(_selectedDay!, hora);
+      _reloadDataAfterAction();
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erro ao bloquear: ${e.toString()}')));
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
+  }
+
+  Future<void> _handleReativarSessao(Horario horario) async {
+    setState(() => _isSaving = true);
+    try {
+      await _firestoreService.reativarSessao(horario, _selectedDay!);
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Sessão reativada com sucesso!')));
+      _reloadDataAfterAction();
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erro ao reativar: ${e.toString()}')));
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
   }
 
   Future<void> _handleBloquearDiaInteiro() async {
@@ -166,48 +226,6 @@ class _SessoesState extends State<Sessoes> {
     }
   }
 
-  Future<void> _handleDesmarcarSessao(Horario horario) async {
-    final bool? confirmar = await _showConfirmationDialog('Desmarcar Sessão', 'Tem certeza? Esta ação irá reagendar as sessões futuras.');
-    if (confirmar != true) return;
-    setState(() => _isSaving = true);
-    try {
-      await _firestoreService.desmarcarSessao(horario, _selectedDay!);
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Sessão desmarcada e futuras reagendadas!')));
-      _reloadDataAfterAction();
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erro ao desmarcar: ${e.toString()}')));
-    } finally {
-      if (mounted) setState(() => _isSaving = false);
-    }
-  }
-
-  Future<void> _handleReativarSessao(Horario horario) async {
-    final bool? confirmar = await _showConfirmationDialog('Reativar Sessão', 'Isso irá reverter o reagendamento e apagar a última sessão extra. Deseja continuar?');
-    if (confirmar != true) return;
-    setState(() => _isSaving = true);
-    try {
-      await _firestoreService.reativarSessao(horario, _selectedDay!);
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Sessão reativada com sucesso!')));
-      _reloadDataAfterAction();
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erro ao reativar: ${e.toString()}')));
-    } finally {
-      if (mounted) setState(() => _isSaving = false);
-    }
-  }
-
-  Future<void> _handleBloquearHorario(String hora) async {
-    setState(() => _isSaving = true);
-    try {
-      await _firestoreService.bloquearHorario(_selectedDay!, hora);
-      _reloadDataAfterAction();
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erro ao bloquear: ${e.toString()}')));
-    } finally {
-      if (mounted) setState(() => _isSaving = false);
-    }
-  }
-
   Future<void> _handleDesbloquearHorario(String hora) async {
     setState(() => _isSaving = true);
     try {
@@ -223,24 +241,35 @@ class _SessoesState extends State<Sessoes> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Sessões'), centerTitle: true),
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(45.0), 
+        child: AppBar(
+          title: const Text('Sessões'),
+          centerTitle: true,
+        ),
+      ),
       body: Column(
         children: [
-          Card(margin: const EdgeInsets.all(8.0), child: _buildTableCalendar()),
+          Card(
+            margin: const EdgeInsets.all(8.0),
+            child: _buildTableCalendar()
+          ),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
             child: Row(
               children: [
-                Expanded(child: ElevatedButton.icon(
-                  icon: const Icon(Icons.block, size: 18),
-                  label: const Text("Bloquear todo dia"),
+                Expanded(child: ElevatedButton(
+                  child: const FittedBox(
+                    child: Text("Bloquear todo dia"),
+                  ),
                   onPressed: _isLoading || _isSaving ? null : _handleBloquearDiaInteiro,
                   style: ElevatedButton.styleFrom(backgroundColor: Colors.grey.shade700, foregroundColor: Colors.white),
                 )),
                 const SizedBox(width: 8),
-                Expanded(child: ElevatedButton.icon(
-                  icon: const Icon(Icons.lock_open, size: 18),
-                  label: const Text("Desbloquear todo dia"),
+                Expanded(child: ElevatedButton(
+                  child: const FittedBox(
+                    child: Text("Desbloquear todo dia"),
+                  ),
                   onPressed: _isLoading || _isSaving ? null : _handleDesbloquearDiaInteiro,
                   style: ElevatedButton.styleFrom(backgroundColor: Colors.green.shade600, foregroundColor: Colors.white),
                 )),
@@ -300,10 +329,14 @@ class _SessoesState extends State<Sessoes> {
       case 'Agendada':
         cardColor = Colors.orange.shade100;
         title = Text(horario.pacienteNome ?? 'Paciente não informado');
-        subtitle = Text("Sessão ${horario.sessaoNumero} de ${horario.totalSessoes}");
+        subtitle = Text(
+          "Sessão ${horario.sessaoNumero} de ${horario.totalSessoes}",
+          softWrap: false,
+          overflow: TextOverflow.ellipsis,
+        );
         actions = [
           TextButton(child: const Text("Desmarcar"), onPressed: () => _handleDesmarcarSessao(horario)),
-          IconButton(icon: const Icon(Icons.block, color: Colors.grey, size: 20), tooltip: "Bloquear e reagendar", onPressed: () => _handleDesmarcarSessao(horario)),
+          IconButton(icon: const Icon(Icons.block, color: Colors.grey, size: 20), tooltip: "Bloquear e Desmarcar", onPressed: () => _handleBloquearHorario(horario.hora, desmarcando: true)),
         ];
         break;
       case 'Desmarcada':
@@ -326,31 +359,53 @@ class _SessoesState extends State<Sessoes> {
     return Card(
       color: cardColor,
       margin: const EdgeInsets.symmetric(vertical: 4.0),
-      child: ListTile(
-        leading: Text(horario.hora, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-        title: title,
-        subtitle: subtitle,
-        trailing: _isSaving && _horarioEmAgendamento != horario.hora ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 3)) : Row(mainAxisSize: MainAxisSize.min, children: actions),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+        child: Row(
+          children: [
+            Text(horario.hora, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  title,
+                  if (subtitle != null) subtitle,
+                ],
+              ),
+            ),
+            _isSaving && _horarioEmAgendamento != horario.hora
+                ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 3))
+                : Row(mainAxisSize: MainAxisSize.min, children: actions),
+          ],
+        ),
       ),
     );
   }
-
+  
   Widget _buildFormularioAgendamento(Horario horario) {
     return Padding(
-      padding: const EdgeInsets.all(16.0),
+      padding: const EdgeInsets.all(12.0),
       child: Form(
         key: _formKey,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Novo Agendamento - ${horario.hora}', style: Theme.of(context).textTheme.titleLarge),
-            const SizedBox(height: 16),
+            // *** ALTERAÇÃO: TÍTULO COM FONTE MENOR ***
+            Text('Novo Agendamento - ${horario.hora}', style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 12),
             StreamBuilder<QuerySnapshot>(
               stream: _firestoreService.getPacientesStream(),
               builder: (context, snapshot) {
                 if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
                 return DropdownButtonFormField<String>(
-                  decoration: const InputDecoration(labelText: 'Paciente', border: OutlineInputBorder()),
+                  // *** ALTERAÇÃO: DECORAÇÃO MAIS COMPACTA ***
+                  decoration: const InputDecoration(
+                    labelText: 'Paciente',
+                    border: OutlineInputBorder(),
+                    isDense: true,
+                    contentPadding: EdgeInsets.symmetric(vertical: 8.0, horizontal: 12.0)
+                  ),
                   items: snapshot.data!.docs.map((doc) => DropdownMenuItem<String>(
                     value: doc.id,
                     child: Text(doc['nome']),
@@ -361,22 +416,34 @@ class _SessoesState extends State<Sessoes> {
                 );
               },
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 8),
             TextFormField(
               controller: _quantidadeSessoesController,
-              decoration: const InputDecoration(labelText: 'Quantidade de Sessões', border: OutlineInputBorder()),
+              // *** ALTERAÇÃO: DECORAÇÃO MAIS COMPACTA ***
+              decoration: const InputDecoration(
+                labelText: 'Quantidade de Sessões',
+                border: OutlineInputBorder(),
+                isDense: true,
+                contentPadding: EdgeInsets.symmetric(vertical: 8.0, horizontal: 12.0)
+              ),
               keyboardType: TextInputType.number,
-              validator: (v) => (v == null || v.isEmpty || int.tryParse(v) == null || int.parse(v) <= 0) ? 'Insira um nº válido' : null,
+              validator: (v) {
+                if (v == null || v.isEmpty) return 'Campo obrigatório.';
+                final numero = int.tryParse(v);
+                if (numero == null) return 'Insira um número válido.';
+                if (numero <= 0) return 'Deve ser maior que zero.';
+                return null;
+              },
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 8),
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
                 TextButton(onPressed: () => setState(() => _horarioEmAgendamento = null), child: const Text('Cancelar')),
                 const SizedBox(width: 8),
-                ElevatedButton.icon(
-                  icon: const Icon(Icons.save),
-                  label: const Text('Agendar'),
+                // *** ALTERAÇÃO: BOTÃO MENOR SEM ÍCONE ***
+                ElevatedButton(
+                  child: const Text('Agendar'),
                   onPressed: _isSaving ? null : () => _handleAgendarSessoes(horario.hora),
                 ),
               ],
@@ -392,6 +459,22 @@ class _SessoesState extends State<Sessoes> {
       firstDay: DateTime.utc(2020, 1, 1),
       lastDay: DateTime.utc(2030, 12, 31),
       focusedDay: _focusedDay,
+      rowHeight: 36.0,
+      daysOfWeekHeight: 18.0,
+      headerStyle: HeaderStyle(
+        formatButtonVisible: false,
+        titleCentered: true,
+        titleTextStyle: const TextStyle(fontSize: 15.0),
+        headerPadding: const EdgeInsets.symmetric(vertical: 2.0),
+        leftChevronPadding: const EdgeInsets.all(4.0),
+        rightChevronPadding: const EdgeInsets.all(4.0),
+        leftChevronMargin: EdgeInsets.zero,
+        rightChevronMargin: EdgeInsets.zero,
+      ),
+      calendarStyle: const CalendarStyle(
+        cellPadding: EdgeInsets.zero,
+        cellMargin: EdgeInsets.all(2.0),
+      ),
       selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
       onDaySelected: (selected, focused) {
         if (!isSameDay(_selectedDay, selected)) {
@@ -411,15 +494,69 @@ class _SessoesState extends State<Sessoes> {
           final dateKey = DateFormat('yyyy-MM-dd').format(day);
           final color = _dayColors[dateKey];
           return Container(
-            margin: const EdgeInsets.all(6.0),
+            margin: const EdgeInsets.all(2.0),
             decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-            child: Center(child: Text(day.day.toString(), style: const TextStyle(color: Colors.black87))),
+            child: Center(child: Text(day.day.toString(), style: const TextStyle(color: Colors.black87, fontSize: 12))),
           );
         },
+        selectedBuilder: (context, day, focusedDay) {
+           return Container(
+            margin: const EdgeInsets.all(2.0),
+            decoration: BoxDecoration(
+              color: Theme.of(context).primaryColor,
+              shape: BoxShape.circle,
+            ),
+            child: Center(child: Text(day.day.toString(), style: const TextStyle(color: Colors.white, fontSize: 12))),
+          );
+        },
+        todayBuilder: (context, day, focusedDay) {
+          final dateKey = DateFormat('yyyy-MM-dd').format(day);
+          final color = _dayColors[dateKey];
+          return Container(
+            margin: const EdgeInsets.all(2.0),
+            decoration: BoxDecoration(
+              color: color,
+              shape: BoxShape.circle,
+              border: Border.all(color: Theme.of(context).primaryColorDark, width: 2)
+            ),
+            child: Center(child: Text(day.day.toString(), style: const TextStyle(color: Colors.black87, fontSize: 12))),
+          );
+        }
       ),
       calendarFormat: CalendarFormat.month,
       locale: 'pt_BR',
-      headerStyle: const HeaderStyle(formatButtonVisible: false, titleCentered: true),
+    );
+  }
+
+  Future<DesmarcarOpcao?> _showDesmarcarOptionsDialog() {
+    return showDialog<DesmarcarOpcao>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Escolha uma opção'),
+          content: const Text('Como você deseja desmarcar esta sessão?'),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('Apenas esta sessão'),
+              onPressed: () {
+                Navigator.of(context).pop(DesmarcarOpcao.apenasEsta);
+              },
+            ),
+            TextButton(
+              child: const Text('Esta e as futuras'),
+              onPressed: () {
+                Navigator.of(context).pop(DesmarcarOpcao.todasAsFuturas);
+              },
+            ),
+            TextButton(
+              child: const Text('Cancelar', style: TextStyle(color: Colors.grey)),
+              onPressed: () {
+                Navigator.of(context).pop(DesmarcarOpcao.cancelar);
+              },
+            ),
+          ],
+        );
+      },
     );
   }
 

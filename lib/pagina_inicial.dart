@@ -10,10 +10,13 @@ class MainPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Tela Inicial'), // Título da AppBar
-        centerTitle: true, // Centraliza o título da AppBar
-        backgroundColor: Colors.blue, // Cor de fundo da AppBar
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(45.0), 
+        child: AppBar(
+          title: const Text('Tela Inicial'),
+          centerTitle: true,
+          backgroundColor: Colors.blue, // Cor de fundo da AppBar
+        ),
       ),
       body: Center(
         child: Container(

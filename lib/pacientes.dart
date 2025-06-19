@@ -75,9 +75,13 @@ class _PacientesPageState extends State<PacientesPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Pacientes'),
-        centerTitle: true,
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(45.0), 
+        child: AppBar(
+          title: const Text('Pacientes'),
+          centerTitle: true,
+          backgroundColor: Colors.blue, // Cor de fundo da AppBar
+        ),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
