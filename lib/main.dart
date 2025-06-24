@@ -1,3 +1,4 @@
+// 11ange/agendatreinamento/AgendaTreinamento-f667d20bbd422772da4aba80e9e5223229c98088/lib/main.dart
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:intl/date_symbol_data_local.dart'; // Importe esta linha
@@ -54,6 +55,15 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
+    // --- LÓGICA PARA OBTER A RESOLUÇÃO ---
+    final mediaQuery = MediaQuery.of(context);
+    final size = mediaQuery.size;
+    final pixelRatio = mediaQuery.devicePixelRatio;
+    // Arredondando para garantir que sejam números inteiros
+    final physicalWidth = (size.width * pixelRatio).round();
+    final physicalHeight = (size.height * pixelRatio).round();
+    // ------------------------------------
+
     return Scaffold(
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(45.0), 
@@ -90,6 +100,14 @@ class _LoginPageState extends State<LoginPage> {
                   border: OutlineInputBorder(), // Opcional: adiciona uma borda ao TextField
                 ),
               ),
+              const SizedBox(height: 15),
+              // --- WIDGET PARA EXIBIR A RESOLUÇÃO ---
+              Text(
+                //'Resolução: ${physicalWidth}x$physicalHeight px',
+                'Resolução: ${size.width} x ${size.height} x ${pixelRatio}',
+                style: TextStyle(color: Colors.grey[600], fontSize: 12),
+              ),
+              // ---------------------------------------
               const SizedBox(height: 15),
               SizedBox( // Envolve o botão para controlar sua largura dentro do Container
                 width: double.infinity, // Ocupa a largura total do Container

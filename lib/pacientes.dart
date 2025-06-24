@@ -228,7 +228,14 @@ class _PacientesPageState extends State<PacientesPage> {
                       margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 6.0),
                       child: ListTile(
                         title: Text(data['nome'] ?? 'Nome não informado', style: const TextStyle(fontWeight: FontWeight.bold)),
-                        subtitle: Text('Responsável: ${data['nomeResponsavel'] ?? 'N/A'}'),
+                        // --- ALTERAÇÃO AQUI ---
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Responsável: ${data['nomeResponsavel'] ?? 'N/A'}'),
+                            Text('Telefone: ${data['telefoneResponsavel'] ?? 'N/A'}'),
+                          ],
+                        ),
                         onTap: () => _showAddOrEditPacienteDialog(docId: doc.id, initialData: data),
                         trailing: IconButton(
                           icon: const Icon(Icons.delete_outline, color: Colors.red),
