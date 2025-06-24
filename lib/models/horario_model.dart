@@ -1,3 +1,4 @@
+// 11ange/agendatreinamento/AgendaTreinamento-f667d20bbd422772da4aba80e9e5223229c98088/lib/models/horario_model.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 /// Representa os dados detalhados de uma sessão que foi agendada.
@@ -12,6 +13,11 @@ class SessaoAgendada {
   final bool reagendada;
   final Timestamp? desmarcadaEm;
 
+  // Novos campos de pagamento
+  final String? formaPagamento;
+  final String? convenio;
+  final String? parcelamento;
+
   SessaoAgendada({
     required this.agendamentoId,
     required this.agendamentoStartDate,
@@ -22,6 +28,9 @@ class SessaoAgendada {
     required this.totalSessoes,
     this.reagendada = false,
     this.desmarcadaEm,
+    this.formaPagamento,
+    this.convenio,
+    this.parcelamento,
   });
 
   /// Cria uma instância a partir de um mapa (geralmente do Firestore).
@@ -36,6 +45,9 @@ class SessaoAgendada {
       totalSessoes: map['totalSessoes'] ?? 0,
       reagendada: map['reagendada'] ?? false,
       desmarcadaEm: map['desmarcadaEm'],
+      formaPagamento: map['formaPagamento'],
+      convenio: map['convenio'],
+      parcelamento: map['parcelamento'],
     );
   }
 
@@ -51,6 +63,9 @@ class SessaoAgendada {
       'totalSessoes': totalSessoes,
       'reagendada': reagendada,
       if (desmarcadaEm != null) 'desmarcadaEm': desmarcadaEm,
+      if (formaPagamento != null) 'formaPagamento': formaPagamento,
+      if (convenio != null) 'convenio': convenio,
+      if (parcelamento != null) 'parcelamento': parcelamento,
     };
   }
 }

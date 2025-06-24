@@ -1,3 +1,4 @@
+// 11ange/agendatreinamento/AgendaTreinamento-f667d20bbd422772da4aba80e9e5223229c98088/lib/models/paciente.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class Paciente {
@@ -8,9 +9,6 @@ class Paciente {
   final String nomeResponsavel;
   final String telefoneResponsavel;
   final String? emailResponsavel;
-  final String? convenio;
-  final String formaPagamento;
-  final String? parcelamento;
   final String afinandoCerebro;
   final String? observacoes;
   final DateTime dataCadastro;
@@ -23,9 +21,6 @@ class Paciente {
     required this.nomeResponsavel,
     required this.telefoneResponsavel,
     this.emailResponsavel,
-    this.convenio,
-    required this.formaPagamento,
-    this.parcelamento,
     required this.afinandoCerebro,
     this.observacoes,
     required this.dataCadastro,
@@ -42,9 +37,6 @@ class Paciente {
       nomeResponsavel: data['nomeResponsavel'] ?? '',
       telefoneResponsavel: data['telefoneResponsavel'] ?? '',
       emailResponsavel: data['emailResponsavel'],
-      convenio: data['convenio'],
-      formaPagamento: data['formaPagamento'] ?? '',
-      parcelamento: data['parcelamento'],
       afinandoCerebro: data['afinandoCerebro'] ?? '',
       observacoes: data['observacoes'],
       dataCadastro: (data['dataCadastro'] as Timestamp?)?.toDate() ?? DateTime.now(),
@@ -60,9 +52,6 @@ class Paciente {
       'nomeResponsavel': nomeResponsavel,
       'telefoneResponsavel': telefoneResponsavel,
       if (emailResponsavel != null) 'emailResponsavel': emailResponsavel,
-      if (convenio != null) 'convenio': convenio,
-      'formaPagamento': formaPagamento,
-      if (parcelamento != null) 'parcelamento': parcelamento,
       'afinandoCerebro': afinandoCerebro,
       if (observacoes != null) 'observacoes': observacoes,
       'dataCadastro': dataCadastro,

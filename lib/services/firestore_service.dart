@@ -1,3 +1,4 @@
+// 11ange/agendatreinamento/AgendaTreinamento-f667d20bbd422772da4aba80e9e5223229c98088/lib/services/firestore_service.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 import '../models/horario_model.dart';
@@ -60,6 +61,10 @@ class FirestoreService {
     required String pacienteId,
     required String pacienteNome,
     required int quantidade,
+    // Novos parâmetros de pagamento
+    String? formaPagamento,
+    String? convenio,
+    String? parcelamento,
   }) async {
     final agendamentoId = _db.collection(_sessoesAgendadasCollection).doc().id;
     final WriteBatch batch = _db.batch();
@@ -77,6 +82,10 @@ class FirestoreService {
         status: 'Agendada',
         sessaoNumero: i + 1,
         totalSessoes: quantidade,
+        // Salvando os novos dados
+        formaPagamento: formaPagamento,
+        convenio: convenio,
+        parcelamento: parcelamento,
       );
       batch.set(docRef, {'sessoes': {hora: novaSessao.toMap()}}, SetOptions(merge: true));
     }

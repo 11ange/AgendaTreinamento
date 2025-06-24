@@ -1,3 +1,4 @@
+// File: lib/sessoes.dart
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:table_calendar/table_calendar.dart';
@@ -17,8 +18,6 @@ class Sessoes extends StatefulWidget {
 }
 
 class _SessoesState extends State<Sessoes> {
-  final _formKey = GlobalKey<FormState>();
-  final _quantidadeSessoesController = TextEditingController();
   final FirestoreService _firestoreService = FirestoreService();
 
   Map<String, List<String>> _horariosDisponibilidadePadrao = {};
@@ -29,10 +28,6 @@ class _SessoesState extends State<Sessoes> {
 
   bool _isLoading = true;
   bool _isSaving = false;
-  String? _horarioEmAgendamento;
-
-  String? _formSelectedPacienteId;
-  String? _formSelectedPacienteNome;
 
   @override
   void initState() {
@@ -41,22 +36,13 @@ class _SessoesState extends State<Sessoes> {
     _initializeData();
   }
 
-  @override
-  void dispose() {
-    _quantidadeSessoesController.dispose();
-    super.dispose();
-  }
-
   Future<void> _initializeData() async {
     await _loadDataForDay(_selectedDay!);
     await _fetchColorsForMonth(_focusedDay);
   }
 
   Future<void> _loadDataForDay(DateTime day) async {
-    setState(() {
-      _isLoading = true;
-      _horarioEmAgendamento = null;
-    });
+    setState(() => _isLoading = true);
     try {
       if (_horariosDisponibilidadePadrao.isEmpty) {
         _horariosDisponibilidadePadrao = await _firestoreService.getDisponibilidadePadrao();
@@ -105,19 +91,13 @@ class _SessoesState extends State<Sessoes> {
   }
 
   void _reloadDataAfterAction() {
-    setState(() {
-       _horarioEmAgendamento = null;
-    });
     _fetchColorsForMonth(_focusedDay);
     _loadDataForDay(_selectedDay!);
   }
 
   Future<void> _handleDesmarcarSessao(Horario horario) async {
     final opcao = await _showDesmarcarOptionsDialog();
-
-    if (opcao == null || opcao == DesmarcarOpcao.cancelar) {
-      return; 
-    }
+    if (opcao == null || opcao == DesmarcarOpcao.cancelar) return;
 
     setState(() => _isSaving = true);
     try {
@@ -152,6 +132,18 @@ class _SessoesState extends State<Sessoes> {
       _reloadDataAfterAction();
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erro ao bloquear: ${e.toString()}')));
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
+  }
+  
+  Future<void> _handleDesbloquearHorario(String hora) async {
+    setState(() => _isSaving = true);
+    try {
+      await _firestoreService.desbloquearHorario(_selectedDay!, hora);
+      _reloadDataAfterAction();
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erro ao desbloquear: ${e.toString()}')));
     } finally {
       if (mounted) setState(() => _isSaving = false);
     }
@@ -206,38 +198,6 @@ class _SessoesState extends State<Sessoes> {
     }
   }
 
-  Future<void> _handleAgendarSessoes(String hora) async {
-    if (!(_formKey.currentState?.validate() ?? false) || _formSelectedPacienteId == null) return;
-    setState(() => _isSaving = true);
-    try {
-      await _firestoreService.agendarSessoesRecorrentes(
-        startDate: _selectedDay!,
-        hora: hora,
-        pacienteId: _formSelectedPacienteId!,
-        pacienteNome: _formSelectedPacienteNome!,
-        quantidade: int.parse(_quantidadeSessoesController.text),
-      );
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Sessões agendadas com sucesso!')));
-      _reloadDataAfterAction();
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erro ao agendar: ${e.toString()}')));
-    } finally {
-      if (mounted) setState(() => _isSaving = false);
-    }
-  }
-
-  Future<void> _handleDesbloquearHorario(String hora) async {
-    setState(() => _isSaving = true);
-    try {
-      await _firestoreService.desbloquearHorario(_selectedDay!, hora);
-      _reloadDataAfterAction();
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erro ao desbloquear: ${e.toString()}')));
-    } finally {
-      if (mounted) setState(() => _isSaving = false);
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -259,17 +219,13 @@ class _SessoesState extends State<Sessoes> {
             child: Row(
               children: [
                 Expanded(child: ElevatedButton(
-                  child: const FittedBox(
-                    child: Text("Bloquear todo dia"),
-                  ),
+                  child: const FittedBox(child: Text("Bloquear todo dia")),
                   onPressed: _isLoading || _isSaving ? null : _handleBloquearDiaInteiro,
                   style: ElevatedButton.styleFrom(backgroundColor: Colors.grey.shade700, foregroundColor: Colors.white),
                 )),
                 const SizedBox(width: 8),
                 Expanded(child: ElevatedButton(
-                  child: const FittedBox(
-                    child: Text("Desbloquear todo dia"),
-                  ),
+                  child: const FittedBox(child: Text("Desbloquear todo dia")),
                   onPressed: _isLoading || _isSaving ? null : _handleDesbloquearDiaInteiro,
                   style: ElevatedButton.styleFrom(backgroundColor: Colors.green.shade600, foregroundColor: Colors.white),
                 )),
@@ -303,9 +259,6 @@ class _SessoesState extends State<Sessoes> {
       itemCount: renderList.length,
       itemBuilder: (context, index) {
         final horario = renderList[index];
-        if (_horarioEmAgendamento == horario.hora && horario.status == 'disponivel') {
-          return Card(elevation: 4, color: Colors.blue.shade50, child: _buildFormularioAgendamento(horario));
-        }
         return _buildHorarioListItem(horario);
       },
     );
@@ -322,7 +275,7 @@ class _SessoesState extends State<Sessoes> {
         cardColor = Colors.green.shade100;
         title = const Text("Horário Disponível", style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold));
         actions = [
-          TextButton(child: const Text("Agendar"), onPressed: () => setState(() => _horarioEmAgendamento = horario.hora)),
+          TextButton(child: const Text("Agendar"), onPressed: () => _showAgendamentoPopup(context, horario.hora)),
           IconButton(icon: const Icon(Icons.block, color: Colors.grey, size: 20), tooltip: "Bloquear", onPressed: () => _handleBloquearHorario(horario.hora)),
         ];
         break;
@@ -374,83 +327,147 @@ class _SessoesState extends State<Sessoes> {
                 ],
               ),
             ),
-            _isSaving && _horarioEmAgendamento != horario.hora
-                ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 3))
-                : Row(mainAxisSize: MainAxisSize.min, children: actions),
+            if (_isSaving)
+                const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 3))
+            else
+                Row(mainAxisSize: MainAxisSize.min, children: actions),
           ],
         ),
       ),
     );
   }
-  
-  Widget _buildFormularioAgendamento(Horario horario) {
-    return Padding(
-      padding: const EdgeInsets.all(12.0),
-      child: Form(
-        key: _formKey,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // *** ALTERAÇÃO: TÍTULO COM FONTE MENOR ***
-            Text('Novo Agendamento - ${horario.hora}', style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 12),
-            StreamBuilder<QuerySnapshot>(
-              stream: _firestoreService.getPacientesStream(),
-              builder: (context, snapshot) {
-                if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
-                return DropdownButtonFormField<String>(
-                  // *** ALTERAÇÃO: DECORAÇÃO MAIS COMPACTA ***
-                  decoration: const InputDecoration(
-                    labelText: 'Paciente',
-                    border: OutlineInputBorder(),
-                    isDense: true,
-                    contentPadding: EdgeInsets.symmetric(vertical: 8.0, horizontal: 12.0)
+
+  Future<void> _showAgendamentoPopup(BuildContext context, String hora) {
+    final formKey = GlobalKey<FormState>();
+    final quantidadeSessoesController = TextEditingController(text: '1');
+    final convenioController = TextEditingController();
+
+    String? selectedPacienteId;
+    String? selectedPacienteNome;
+    String? formaPagamentoValue;
+    String? parcelamentoValue;
+
+    return showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (context, setStateInDialog) {
+            return AlertDialog(
+              title: Text('Novo Agendamento - $hora'),
+              content: SingleChildScrollView(
+                child: Form(
+                  key: formKey,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: <Widget>[
+                      StreamBuilder<QuerySnapshot>(
+                        stream: _firestoreService.getPacientesStream(),
+                        builder: (context, snapshot) {
+                          if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+                          return DropdownButtonFormField<String>(
+                            decoration: const InputDecoration(labelText: 'Paciente', border: OutlineInputBorder(), isDense: true),
+                            items: snapshot.data!.docs.map((doc) => DropdownMenuItem<String>(
+                              value: doc.id,
+                              child: Text(doc['nome']),
+                              onTap: () => selectedPacienteNome = doc['nome'],
+                            )).toList(),
+                            onChanged: (value) => selectedPacienteId = value,
+                            validator: (v) => v == null ? 'Selecione um paciente' : null,
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: quantidadeSessoesController,
+                        decoration: const InputDecoration(labelText: 'Quantidade de Sessões', border: OutlineInputBorder(), isDense: true),
+                        keyboardType: TextInputType.number,
+                        validator: (v) {
+                          if (v == null || v.isEmpty) return 'Campo obrigatório.';
+                          final numero = int.tryParse(v);
+                          if (numero == null || numero <= 0) return 'Insira um número válido.';
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      // -- ALTERAÇÃO AQUI --
+                      DropdownButtonFormField<String>(
+                        value: formaPagamentoValue,
+                        decoration: const InputDecoration(labelText: 'Forma de Pagamento', border: OutlineInputBorder(), isDense: true),
+                        items: ['PIX', 'Dinheiro', 'Convênio']
+                            .map((label) => DropdownMenuItem(value: label, child: Text(label)))
+                            .toList(),
+                        onChanged: (String? newValue) {
+                          setStateInDialog(() {
+                            formaPagamentoValue = newValue;
+                            convenioController.clear();
+                            parcelamentoValue = null;
+                          });
+                        },
+                        validator: (v) => v == null ? 'Selecione uma forma de pagamento' : null,
+                      ),
+                      // -- ALTERAÇÃO AQUI --
+                      if (formaPagamentoValue == 'Convênio') ...[
+                        const SizedBox(height: 16),
+                        TextFormField(
+                          controller: convenioController,
+                          decoration: const InputDecoration(labelText: 'Nome do Convênio', border: OutlineInputBorder(), isDense: true),
+                          validator: (v) => (v == null || v.isEmpty) ? 'Nome do convênio é obrigatório' : null,
+                        ),
+                      ],
+                      // -- ALTERAÇÃO AQUI --
+                      if (formaPagamentoValue == 'PIX' || formaPagamentoValue == 'Dinheiro') ...[
+                        const SizedBox(height: 16),
+                        DropdownButtonFormField<String>(
+                          value: parcelamentoValue,
+                          decoration: const InputDecoration(labelText: 'Parcelamento', border: OutlineInputBorder(), isDense: true),
+                          items: ['Por Sessão', '3x']
+                              .map((label) => DropdownMenuItem(value: label, child: Text(label)))
+                              .toList(),
+                          onChanged: (String? newValue) => setStateInDialog(() => parcelamentoValue = newValue),
+                          validator: (v) => v == null ? 'Selecione o parcelamento' : null,
+                        ),
+                      ],
+                    ],
                   ),
-                  items: snapshot.data!.docs.map((doc) => DropdownMenuItem<String>(
-                    value: doc.id,
-                    child: Text(doc['nome']),
-                    onTap: () => _formSelectedPacienteNome = doc['nome'],
-                  )).toList(),
-                  onChanged: (value) => _formSelectedPacienteId = value,
-                  validator: (v) => v == null ? 'Selecione um paciente' : null,
-                );
-              },
-            ),
-            const SizedBox(height: 8),
-            TextFormField(
-              controller: _quantidadeSessoesController,
-              // *** ALTERAÇÃO: DECORAÇÃO MAIS COMPACTA ***
-              decoration: const InputDecoration(
-                labelText: 'Quantidade de Sessões',
-                border: OutlineInputBorder(),
-                isDense: true,
-                contentPadding: EdgeInsets.symmetric(vertical: 8.0, horizontal: 12.0)
+                ),
               ),
-              keyboardType: TextInputType.number,
-              validator: (v) {
-                if (v == null || v.isEmpty) return 'Campo obrigatório.';
-                final numero = int.tryParse(v);
-                if (numero == null) return 'Insira um número válido.';
-                if (numero <= 0) return 'Deve ser maior que zero.';
-                return null;
-              },
-            ),
-            const SizedBox(height: 8),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                TextButton(onPressed: () => setState(() => _horarioEmAgendamento = null), child: const Text('Cancelar')),
-                const SizedBox(width: 8),
-                // *** ALTERAÇÃO: BOTÃO MENOR SEM ÍCONE ***
+              actions: <Widget>[
+                TextButton(
+                  child: const Text('Cancelar'),
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
                 ElevatedButton(
                   child: const Text('Agendar'),
-                  onPressed: _isSaving ? null : () => _handleAgendarSessoes(horario.hora),
+                  onPressed: () async {
+                    if (formKey.currentState!.validate()) {
+                      setState(() => _isSaving = true);
+                      Navigator.of(context).pop(); // Fecha o popup antes de salvar
+                      try {
+                        await _firestoreService.agendarSessoesRecorrentes(
+                          startDate: _selectedDay!,
+                          hora: hora,
+                          pacienteId: selectedPacienteId!,
+                          pacienteNome: selectedPacienteNome!,
+                          quantidade: int.parse(quantidadeSessoesController.text),
+                          formaPagamento: formaPagamentoValue,
+                          convenio: convenioController.text.isNotEmpty ? convenioController.text : null,
+                          parcelamento: parcelamentoValue,
+                        );
+                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Sessões agendadas com sucesso!')));
+                        _reloadDataAfterAction();
+                      } catch (e) {
+                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erro ao agendar: ${e.toString()}')));
+                      } finally {
+                        if(mounted) setState(() => _isSaving = false);
+                      }
+                    }
+                  },
                 ),
               ],
-            )
-          ],
-        ),
-      ),
+            );
+          },
+        );
+      },
     );
   }
 
@@ -538,21 +555,15 @@ class _SessoesState extends State<Sessoes> {
           actions: <Widget>[
             TextButton(
               child: const Text('Apenas esta sessão'),
-              onPressed: () {
-                Navigator.of(context).pop(DesmarcarOpcao.apenasEsta);
-              },
+              onPressed: () => Navigator.of(context).pop(DesmarcarOpcao.apenasEsta),
             ),
             TextButton(
               child: const Text('Esta e as futuras'),
-              onPressed: () {
-                Navigator.of(context).pop(DesmarcarOpcao.todasAsFuturas);
-              },
+              onPressed: () => Navigator.of(context).pop(DesmarcarOpcao.todasAsFuturas),
             ),
             TextButton(
               child: const Text('Cancelar', style: TextStyle(color: Colors.grey)),
-              onPressed: () {
-                Navigator.of(context).pop(DesmarcarOpcao.cancelar);
-              },
+              onPressed: () => Navigator.of(context).pop(DesmarcarOpcao.cancelar),
             ),
           ],
         );

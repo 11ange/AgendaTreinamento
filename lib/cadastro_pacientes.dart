@@ -1,3 +1,4 @@
+// 11ange/agendatreinamento/AgendaTreinamento-f667d20bbd422772da4aba80e9e5223229c98088/lib/cadastro_pacientes.dart
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart'; // Import necessário para o DateFormat
@@ -22,10 +23,7 @@ class _CadastroPacientesPageState extends State<CadastroPacientesPage> {
   final _emailResponsavelController = TextEditingController();
   final _observacoesController = TextEditingController();
   final _nomeResponsavelController = TextEditingController();
-  final _convenioController = TextEditingController();
-  String? _formaPagamentoValue;
   String? _afinandoCerebroValue;
-  String? _parcelamentoValue;
 
   @override
   void initState() {
@@ -40,9 +38,6 @@ class _CadastroPacientesPageState extends State<CadastroPacientesPage> {
       _observacoesController.text = data['observacoes'] ?? '';
       _nomeResponsavelController.text = data['nomeResponsavel'] ?? '';
       _afinandoCerebroValue = data['afinandoCerebro'];
-      _convenioController.text = data['convenio'] ?? '';
-      _formaPagamentoValue = data['formaPagamento'];
-      _parcelamentoValue = data['parcelamento'];
     }
   }
 
@@ -55,7 +50,6 @@ class _CadastroPacientesPageState extends State<CadastroPacientesPage> {
     _emailResponsavelController.dispose();
     _observacoesController.dispose();
     _nomeResponsavelController.dispose();
-    _convenioController.dispose();
     super.dispose();
   }
 
@@ -70,10 +64,7 @@ class _CadastroPacientesPageState extends State<CadastroPacientesPage> {
           'emailResponsavel': _emailResponsavelController.text,
           'observacoes': _observacoesController.text,
           'nomeResponsavel': _nomeResponsavelController.text,
-          'convenio': _convenioController.text,
           'afinandoCerebro': _afinandoCerebroValue,
-          'formaPagamento': _formaPagamentoValue,
-          'parcelamento': _parcelamentoValue,
         };
 
         if (widget.pacienteId == null) {
@@ -196,39 +187,6 @@ class _CadastroPacientesPageState extends State<CadastroPacientesPage> {
                       controller: _emailResponsavelController,
                       decoration: const InputDecoration(hintText: 'Endereço de email (opcional)', border: OutlineInputBorder(), isDense: true, contentPadding: defaultContentPadding),
                       keyboardType: TextInputType.emailAddress,
-                    ),
-                    const SizedBox(height: 15),
-
-                    const Text('Forma de pagamento:', style: TextStyle(fontWeight: FontWeight.bold)),
-                    DropdownButtonFormField<String>(
-                      value: _formaPagamentoValue,
-                      items: const [
-                        DropdownMenuItem(value: 'Dinheiro', child: Text('Dinheiro')),
-                        DropdownMenuItem(value: 'PIX', child: Text('PIX')),
-                        DropdownMenuItem(value: 'Convênio', child: Text('Convênio')),
-                      ],
-                      decoration: const InputDecoration(border: OutlineInputBorder(), hintText: 'Selecione uma opção', isDense: true, contentPadding: defaultContentPadding),
-                      onChanged: (String? newValue) => setState(() => _formaPagamentoValue = newValue),
-                      validator: (v) => (v == null || v.isEmpty) ? 'Forma de pagamento é obrigatória' : null,
-                    ),
-                    const SizedBox(height: 15),
-
-                    const Text('Nome do Convênio:', style: TextStyle(fontWeight: FontWeight.bold)),
-                    TextFormField(
-                      controller: _convenioController,
-                      decoration: const InputDecoration(hintText: 'Nome do Convênio (se aplicável)', border: OutlineInputBorder(), isDense: true, contentPadding: defaultContentPadding),
-                    ),
-                    const SizedBox(height: 15),
-
-                    const Text('Parcelamento:', style: TextStyle(fontWeight: FontWeight.bold)),
-                    DropdownButtonFormField<String>(
-                      value: _parcelamentoValue,
-                      items: const [
-                        DropdownMenuItem(value: 'Sessão', child: Text('Por Sessão')),
-                        DropdownMenuItem(value: '3x', child: Text('3x')),
-                      ],
-                      decoration: const InputDecoration(border: OutlineInputBorder(), hintText: 'Selecione o parcelamento', isDense: true, contentPadding: defaultContentPadding),
-                      onChanged: (String? newValue) => setState(() => _parcelamentoValue = newValue),
                     ),
                     const SizedBox(height: 15),
 
