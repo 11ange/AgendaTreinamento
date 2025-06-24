@@ -1,29 +1,34 @@
 name: agenda_treinamento_web
 description: "A new Flutter project."
-publish_to: 'none' 
+publish_to: 'none'
+
 version: 1.0.0+1
 
 environment:
-  sdk: ^3.9.0-138.0.dev
+  sdk: '>=3.0.0 <4.0.0'
 
 dependencies:
   flutter:
     sdk: flutter
-  flutter_localizations: # Mover para dependencies
+
+  flutter_localizations:
     sdk: flutter
 
+  # Utilitários
   cupertino_icons: ^1.0.8
-  firebase_core: ^3.14.0 # Usar as versões aqui
-  cloud_firestore: ^5.6.9
-  intl: ^0.20.2
-  table_calendar: ^3.2.0
-  firebase_auth: ^5.6.0 # Opcional, se usar
-  cloud_functions: ^5.5.2 # Opcional, se usar
+  intl: ^0.20.2 # Corrigido para a versão exigida pelo Flutter SDK
+  table_calendar: ^3.1.2
+
+  # Dependências do Firebase (Conjunto de versões compatíveis)
+  firebase_core: ^2.27.0
+  cloud_firestore: ^4.15.8
+  firebase_auth: ^4.17.8
+  cloud_functions: ^4.6.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^6.0.0
+  flutter_lints: ^3.0.0
 
 flutter:
   uses-material-design: true

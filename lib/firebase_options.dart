@@ -21,10 +21,7 @@ class DefaultFirebaseOptions {
     }
     switch (defaultTargetPlatform) {
       case TargetPlatform.android:
-        throw UnsupportedError(
-          'DefaultFirebaseOptions have not been configured for android - '
-          'you can reconfigure this by running the FlutterFire CLI again.',
-        );
+        return android;
       case TargetPlatform.iOS:
         throw UnsupportedError(
           'DefaultFirebaseOptions have not been configured for ios - '
@@ -58,6 +55,14 @@ class DefaultFirebaseOptions {
     messagingSenderId: '892404673434',
     projectId: 'agenda-treinamento-6fa61',
     authDomain: 'agenda-treinamento-6fa61.firebaseapp.com',
+    storageBucket: 'agenda-treinamento-6fa61.firebasestorage.app',
+  );
+
+  static const FirebaseOptions android = FirebaseOptions(
+    apiKey: 'AIzaSyBHEg-F8YL0Q6iTgdqP6bnLb2aneaOSMX8',
+    appId: '1:892404673434:android:e5e5344e9bd1fad470e823',
+    messagingSenderId: '892404673434',
+    projectId: 'agenda-treinamento-6fa61',
     storageBucket: 'agenda-treinamento-6fa61.firebasestorage.app',
   );
 
