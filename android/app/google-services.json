@@ -7,9 +7,9 @@
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:892404673434:android:5afde3281741340570e823",
+        "mobilesdk_app_id": "1:892404673434:android:e5e5344e9bd1fad470e823",
         "android_client_info": {
-          "package_name": "com.example.agenda_treinamento_web"
+          "package_name": "com.example.agenda_treinamento"
         }
       },
       "oauth_client": [],
