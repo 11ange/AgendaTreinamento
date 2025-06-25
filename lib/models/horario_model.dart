@@ -1,4 +1,3 @@
-// 11ange/agendatreinamento/AgendaTreinamento-f667d20bbd422772da4aba80e9e5223229c98088/lib/models/horario_model.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class SessaoAgendada {
@@ -6,7 +5,7 @@ class SessaoAgendada {
   final Timestamp agendamentoStartDate;
   final String pacienteId;
   final String pacienteNome;
-  String status; 
+  String status;
   final int sessaoNumero;
   final int totalSessoes;
   final bool reagendada;
@@ -15,7 +14,10 @@ class SessaoAgendada {
   final String? formaPagamento;
   final String? convenio;
   final String? parcelamento;
-  String? statusPagamento; // --- NOVO CAMPO ---
+  String? statusPagamento;
+  Timestamp? dataPagamentoGuia;
+  Map<String, dynamic>? pagamentosParcelados;
+  Timestamp? dataPagamentoSessao; // Novo campo para data de pagamento individual
 
   SessaoAgendada({
     required this.agendamentoId,
@@ -30,7 +32,10 @@ class SessaoAgendada {
     this.formaPagamento,
     this.convenio,
     this.parcelamento,
-    this.statusPagamento, // --- NOVO CAMPO ---
+    this.statusPagamento,
+    this.dataPagamentoGuia,
+    this.pagamentosParcelados,
+    this.dataPagamentoSessao,
   });
 
   factory SessaoAgendada.fromMap(Map<String, dynamic> map) {
@@ -47,7 +52,12 @@ class SessaoAgendada {
       formaPagamento: map['formaPagamento'],
       convenio: map['convenio'],
       parcelamento: map['parcelamento'],
-      statusPagamento: map['statusPagamento'], // --- NOVO CAMPO ---
+      statusPagamento: map['statusPagamento'],
+      dataPagamentoGuia: map['dataPagamentoGuia'],
+      pagamentosParcelados: map['pagamentosParcelados'] != null
+          ? Map<String, dynamic>.from(map['pagamentosParcelados'])
+          : null,
+      dataPagamentoSessao: map['dataPagamentoSessao'],
     );
   }
 
@@ -65,7 +75,10 @@ class SessaoAgendada {
       if (formaPagamento != null) 'formaPagamento': formaPagamento,
       if (convenio != null) 'convenio': convenio,
       if (parcelamento != null) 'parcelamento': parcelamento,
-      if (statusPagamento != null) 'statusPagamento': statusPagamento, // --- NOVO CAMPO ---
+      if (statusPagamento != null) 'statusPagamento': statusPagamento,
+      if (dataPagamentoGuia != null) 'dataPagamentoGuia': dataPagamentoGuia,
+      if (pagamentosParcelados != null) 'pagamentosParcelados': pagamentosParcelados,
+      if (dataPagamentoSessao != null) 'dataPagamentoSessao': dataPagamentoSessao,
     };
   }
 }

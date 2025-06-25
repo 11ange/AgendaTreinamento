@@ -20,7 +20,7 @@ class _SessoesState extends State<Sessoes> {
   final FirestoreService _firestoreService = FirestoreService();
 
   Map<String, List<String>> _horariosDisponibilidadePadrao = {};
-  DateTime _focusedDay = DateTime.now();
+  DateTime _focusedDay = DateTime.now().toUtc();
   DateTime? _selectedDay;
   List<Horario> _horariosDoDia = [];
   Map<String, Color> _dayColors = {};
@@ -62,8 +62,8 @@ class _SessoesState extends State<Sessoes> {
       _horariosDisponibilidadePadrao = await _firestoreService.getDisponibilidadePadrao();
     }
     Map<String, Color> newColors = {};
-    DateTime firstDay = DateTime(month.year, month.month, 1);
-    DateTime lastDay = DateTime(month.year, month.month + 1, 0);
+    DateTime firstDay = DateTime.utc(month.year, month.month, 1);
+    DateTime lastDay = DateTime.utc(month.year, month.month + 1, 0);
 
     for (var day = firstDay; day.isBefore(lastDay.add(const Duration(days: 1))); day = day.add(const Duration(days: 1))) {
       final dateKey = DateFormat('yyyy-MM-dd').format(day);
@@ -89,9 +89,9 @@ class _SessoesState extends State<Sessoes> {
     }
   }
 
-  void _reloadDataAfterAction() {
-    _fetchColorsForMonth(_focusedDay);
-    _loadDataForDay(_selectedDay!);
+  Future<void> _reloadDataAfterAction() async {
+    await _fetchColorsForMonth(_focusedDay);
+    await _loadDataForDay(_selectedDay!);
   }
 
   Future<void> _handleDesmarcarSessao(Horario horario) async {
@@ -100,20 +100,16 @@ class _SessoesState extends State<Sessoes> {
 
     setState(() => _isSaving = true);
     try {
-      switch (opcao) {
-        case DesmarcarOpcao.apenasEsta:
-          await _firestoreService.desmarcarSessaoUnica(horario, _selectedDay!);
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Sessão desmarcada com sucesso!')));
-          break;
-        case DesmarcarOpcao.todasAsFuturas:
-          await _firestoreService.desmarcarSessoesRestantes(horario, _selectedDay!);
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Sessão atual e futuras foram removidas!')));
-          break;
-        case DesmarcarOpcao.cancelar:
-          break;
+      if (opcao == DesmarcarOpcao.apenasEsta) {
+        await _firestoreService.desmarcarSessaoUnicaEReagendar(horario, _selectedDay!);
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Sessão desmarcada e uma nova foi adicionada ao final.')));
+      } else { 
+        await _firestoreService.desmarcarSessoesRestantes(horario, _selectedDay!);
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Sessão atual e futuras foram removidas!')));
       }
-      _reloadDataAfterAction();
-    } catch (e) {
+      await _reloadDataAfterAction();
+    } catch (e, s) {
+      print('Erro ao desmarcar: $e\n$s');
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erro ao desmarcar: ${e.toString()}')));
     } finally {
       if (mounted) setState(() => _isSaving = false);
@@ -128,7 +124,7 @@ class _SessoesState extends State<Sessoes> {
     setState(() => _isSaving = true);
     try {
       await _firestoreService.bloquearHorario(_selectedDay!, hora);
-      _reloadDataAfterAction();
+      await _reloadDataAfterAction();
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erro ao bloquear: ${e.toString()}')));
     } finally {
@@ -140,7 +136,7 @@ class _SessoesState extends State<Sessoes> {
     setState(() => _isSaving = true);
     try {
       await _firestoreService.desbloquearHorario(_selectedDay!, hora);
-      _reloadDataAfterAction();
+      await _reloadDataAfterAction();
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erro ao desbloquear: ${e.toString()}')));
     } finally {
@@ -153,8 +149,9 @@ class _SessoesState extends State<Sessoes> {
     try {
       await _firestoreService.reativarSessao(horario, _selectedDay!);
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Sessão reativada com sucesso!')));
-      _reloadDataAfterAction();
-    } catch (e) {
+      await _reloadDataAfterAction();
+    } catch (e, s) {
+      print('Erro ao reativar: $e\n$s');
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erro ao reativar: ${e.toString()}')));
     } finally {
       if (mounted) setState(() => _isSaving = false);
@@ -171,7 +168,7 @@ class _SessoesState extends State<Sessoes> {
         await _firestoreService.bloquearHorariosEmLote(_selectedDay!, horariosParaBloquear);
       }
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Horários disponíveis bloqueados!')));
-      _reloadDataAfterAction();
+      await _reloadDataAfterAction();
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erro ao bloquear horários: ${e.toString()}')));
     } finally {
@@ -189,7 +186,7 @@ class _SessoesState extends State<Sessoes> {
         await _firestoreService.desbloquearHorariosEmLote(_selectedDay!, horariosParaDesbloquear);
       }
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Horários bloqueados removidos!')));
-      _reloadDataAfterAction();
+      await _reloadDataAfterAction();
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erro ao desbloquear horários: ${e.toString()}')));
     } finally {
@@ -244,20 +241,12 @@ class _SessoesState extends State<Sessoes> {
     if (_horariosDoDia.isEmpty) {
       return const Center(child: Text("Nenhum horário de trabalho definido para este dia."));
     }
-    List<Horario> renderList = [];
-    for (var horario in _horariosDoDia) {
-      if (horario.status == 'Desmarcada') {
-        renderList.add(Horario(hora: horario.hora, sessaoAgendada: null));
-        renderList.add(horario);
-      } else {
-        renderList.add(horario);
-      }
-    }
+    // Simplificação: A lista já vem do service com tudo que precisa ser renderizado.
     return ListView.builder(
       padding: const EdgeInsets.all(8.0),
-      itemCount: renderList.length,
+      itemCount: _horariosDoDia.length,
       itemBuilder: (context, index) {
-        final horario = renderList[index];
+        final horario = _horariosDoDia[index];
         return _buildHorarioListItem(horario);
       },
     );
@@ -274,7 +263,15 @@ class _SessoesState extends State<Sessoes> {
         cardColor = Colors.green.shade100;
         title = const Text("Horário Disponível", style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold));
         actions = [
-          TextButton(child: const Text("Agendar"), onPressed: () => _showAgendamentoPopup(context, horario.hora)),
+          TextButton(
+            child: const Text("Agendar"), 
+            onPressed: () async {
+              final agendou = await _showAgendamentoPopup(context, horario.hora);
+              if (agendou == true) {
+                await _reloadDataAfterAction();
+              }
+            }
+          ),
           IconButton(icon: const Icon(Icons.block, color: Colors.grey, size: 20), tooltip: "Bloquear", onPressed: () => _handleBloquearHorario(horario.hora)),
         ];
         break;
@@ -336,7 +333,7 @@ class _SessoesState extends State<Sessoes> {
     );
   }
 
-  Future<void> _showAgendamentoPopup(BuildContext context, String hora) {
+  Future<bool?> _showAgendamentoPopup(BuildContext context, String hora) {
     final formKey = GlobalKey<FormState>();
     final quantidadeSessoesController = TextEditingController(text: '1');
     final convenioController = TextEditingController();
@@ -346,7 +343,7 @@ class _SessoesState extends State<Sessoes> {
     String? formaPagamentoValue;
     String? parcelamentoValue;
 
-    return showDialog(
+    return showDialog<bool>(
       context: context,
       builder: (BuildContext context) {
         return StatefulBuilder(
@@ -430,14 +427,14 @@ class _SessoesState extends State<Sessoes> {
               actions: <Widget>[
                 TextButton(
                   child: const Text('Cancelar'),
-                  onPressed: () => Navigator.of(context).pop(),
+                  onPressed: () => Navigator.of(context).pop(false),
                 ),
                 ElevatedButton(
                   child: const Text('Agendar'),
                   onPressed: () async {
                     if (formKey.currentState!.validate()) {
                       setState(() => _isSaving = true);
-                      Navigator.of(context).pop(); 
+                      
                       try {
                         await _firestoreService.agendarSessoesRecorrentes(
                           startDate: _selectedDay!,
@@ -451,9 +448,10 @@ class _SessoesState extends State<Sessoes> {
                           statusPagamento: 'Pendente',
                         );
                         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Sessões agendadas com sucesso!')));
-                        _reloadDataAfterAction();
+                        Navigator.of(context).pop(true);
                       } catch (e) {
                         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erro ao agendar: ${e.toString()}')));
+                        Navigator.of(context).pop(false);
                       } finally {
                         if(mounted) setState(() => _isSaving = false);
                       }
@@ -470,6 +468,7 @@ class _SessoesState extends State<Sessoes> {
 
   TableCalendar<dynamic> _buildTableCalendar() {
     return TableCalendar(
+      locale: 'pt_BR',
       firstDay: DateTime.utc(2020, 1, 1),
       lastDay: DateTime.utc(2030, 12, 31),
       focusedDay: _focusedDay,
@@ -493,15 +492,15 @@ class _SessoesState extends State<Sessoes> {
       onDaySelected: (selected, focused) {
         if (!isSameDay(_selectedDay, selected)) {
           setState(() {
-            _selectedDay = selected;
-            _focusedDay = focused;
+            _selectedDay = selected.toUtc();
+            _focusedDay = focused.toUtc();
           });
-          _loadDataForDay(selected);
+          _loadDataForDay(selected.toUtc());
         }
       },
       onPageChanged: (focusedDay) {
-        _focusedDay = focusedDay;
-        _fetchColorsForMonth(focusedDay);
+        _focusedDay = focusedDay.toUtc();
+        _fetchColorsForMonth(focusedDay.toUtc());
       },
       calendarBuilders: CalendarBuilders(
         defaultBuilder: (context, day, focusedDay) {
@@ -538,7 +537,6 @@ class _SessoesState extends State<Sessoes> {
         }
       ),
       calendarFormat: CalendarFormat.month,
-      locale: 'pt_BR',
     );
   }
 
