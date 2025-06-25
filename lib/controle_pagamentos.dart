@@ -43,11 +43,6 @@ class _ControlePagamentosPageState extends State<ControlePagamentosPage> {
       for (var doc in snapshot.docs) {
         if (!doc.exists || !doc.data().containsKey('sessoes')) continue;
         
-        // =======================================================================
-        // CORREÇÃO FINAL: Usa .parse() em vez de .parseUtc()
-        // Isso trata a data do Firestore (ex: "2024-06-25") como uma data local,
-        // ignorando o fuso horário e resolvendo o problema do "dia a menos".
-        // =======================================================================
         final dataDaSessao = DateFormat('yyyy-MM-dd').parse(doc.id);
         final sessoesDoDia = doc.data()['sessoes'] as Map<String, dynamic>;
 
@@ -358,6 +353,15 @@ class _ControlePagamentosPageState extends State<ControlePagamentosPage> {
                       final sessoesComData = _sessoesPorAgendamento[agendamentoId]!;
                       final sessaoRef = sessoesComData.first.sessao;
                       final pacienteNome = sessaoRef.pacienteNome;
+                      
+                      final dataInicio = sessoesComData.first.data;
+                      final dataFim = sessoesComData.last.data;
+                      final formatoData = DateFormat('dd/MM/yy', 'pt_BR');
+                      // =======================================================================
+                      // LÓGICA ADICIONADA: Captura a hora do agendamento
+                      // =======================================================================
+                      final horaAgendamento = _horaPorAgendamento[agendamentoId] ?? '';
+                      final periodo = '${formatoData.format(dataInicio)} - ${formatoData.format(dataFim)} às $horaAgendamento';
 
                       if (sessaoRef.formaPagamento == 'Convênio') {
                          final sessoesDeConvenio = sessoesComData.map((scd) => scd.sessao).toList();
@@ -370,7 +374,13 @@ class _ControlePagamentosPageState extends State<ControlePagamentosPage> {
                           margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
                           child: ListTile(
                             title: Text(pacienteNome, style: const TextStyle(fontWeight: FontWeight.bold)),
-                            subtitle: Text('Convênio: ${sessaoRef.convenio ?? 'Não informado'}'),
+                            subtitle: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(periodo, style: const TextStyle(fontWeight: FontWeight.w500)),
+                                Text('Convênio: ${sessaoRef.convenio ?? 'Não informado'}'),
+                              ],
+                            ),
                             trailing: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
                               crossAxisAlignment: CrossAxisAlignment.end,
@@ -393,7 +403,13 @@ class _ControlePagamentosPageState extends State<ControlePagamentosPage> {
                           margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
                           child: ExpansionTile(
                             title: Text(pacienteNome, style: const TextStyle(fontWeight: FontWeight.bold)),
-                            subtitle: Text("Pagamento: ${sessaoRef.formaPagamento} - 3x"),
+                            subtitle: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(periodo, style: const TextStyle(fontWeight: FontWeight.w500)),
+                                Text("Pagamento: ${sessaoRef.formaPagamento} - 3x"),
+                              ],
+                            ),
                             trailing: Text(
                               statusGlobal,
                               style: TextStyle(
@@ -429,12 +445,15 @@ class _ControlePagamentosPageState extends State<ControlePagamentosPage> {
                         margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
                         child: ExpansionTile(
                           title: Text(pacienteNome, style: const TextStyle(fontWeight: FontWeight.bold)),
-                          subtitle: Text("Pagamento: ${sessaoRef.formaPagamento ?? 'N/A'} - Por Sessão"),
+                          subtitle: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(periodo, style: const TextStyle(fontWeight: FontWeight.w500)),
+                              Text("Pagamento: ${sessaoRef.formaPagamento ?? 'N/A'} - Por Sessão"),
+                            ],
+                          ),
                           children: sessoesComData.map((sessaoComData) {
                              final sessao = sessaoComData.sessao;
-                             // =======================================================================
-                             // CORREÇÃO FINAL: Usa a data já corrigida e não a recalcula
-                             // =======================================================================
                              final dataFormatada = DateFormat('dd/MM/yyyy', 'pt_BR').format(sessaoComData.data);
                              final statusPagamento = sessao.statusPagamento ?? 'Pendente';
                              final isDesmarcada = sessao.status == 'Desmarcada';
