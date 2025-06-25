@@ -1,22 +1,21 @@
 // 11ange/agendatreinamento/AgendaTreinamento-f667d20bbd422772da4aba80e9e5223229c98088/lib/models/horario_model.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-/// Representa os dados detalhados de uma sessão que foi agendada.
 class SessaoAgendada {
   final String agendamentoId;
   final Timestamp agendamentoStartDate;
   final String pacienteId;
   final String pacienteNome;
-  String status; // 'Agendada', 'Desmarcada', 'Bloqueado'
+  String status; 
   final int sessaoNumero;
   final int totalSessoes;
   final bool reagendada;
   final Timestamp? desmarcadaEm;
 
-  // Novos campos de pagamento
   final String? formaPagamento;
   final String? convenio;
   final String? parcelamento;
+  String? statusPagamento; // --- NOVO CAMPO ---
 
   SessaoAgendada({
     required this.agendamentoId,
@@ -31,9 +30,9 @@ class SessaoAgendada {
     this.formaPagamento,
     this.convenio,
     this.parcelamento,
+    this.statusPagamento, // --- NOVO CAMPO ---
   });
 
-  /// Cria uma instância a partir de um mapa (geralmente do Firestore).
   factory SessaoAgendada.fromMap(Map<String, dynamic> map) {
     return SessaoAgendada(
       agendamentoId: map['agendamentoId'] ?? '',
@@ -48,10 +47,10 @@ class SessaoAgendada {
       formaPagamento: map['formaPagamento'],
       convenio: map['convenio'],
       parcelamento: map['parcelamento'],
+      statusPagamento: map['statusPagamento'], // --- NOVO CAMPO ---
     );
   }
 
-  /// Converte a instância em um mapa para ser salvo no Firestore.
   Map<String, dynamic> toMap() {
     return {
       'agendamentoId': agendamentoId,
@@ -66,19 +65,17 @@ class SessaoAgendada {
       if (formaPagamento != null) 'formaPagamento': formaPagamento,
       if (convenio != null) 'convenio': convenio,
       if (parcelamento != null) 'parcelamento': parcelamento,
+      if (statusPagamento != null) 'statusPagamento': statusPagamento, // --- NOVO CAMPO ---
     };
   }
 }
 
-/// Representa um slot de horário na agenda.
-/// Pode ou não conter uma sessão agendada.
 class Horario {
   final String hora;
   final SessaoAgendada? sessaoAgendada;
 
   Horario({required this.hora, this.sessaoAgendada});
 
-  // Getters para facilitar o acesso aos dados na UI
   bool get isBooked => sessaoAgendada != null;
   String get status => sessaoAgendada?.status ?? 'disponivel';
   String? get agendamentoId => sessaoAgendada?.agendamentoId;

@@ -1,4 +1,3 @@
-// 11ange/agendatreinamento/AgendaTreinamento-f667d20bbd422772da4aba80e9e5223229c98088/lib/services/firestore_service.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 import '../models/horario_model.dart';
@@ -61,10 +60,10 @@ class FirestoreService {
     required String pacienteId,
     required String pacienteNome,
     required int quantidade,
-    // Novos parâmetros de pagamento
     String? formaPagamento,
     String? convenio,
     String? parcelamento,
+    String? statusPagamento,
   }) async {
     final agendamentoId = _db.collection(_sessoesAgendadasCollection).doc().id;
     final WriteBatch batch = _db.batch();
@@ -82,10 +81,10 @@ class FirestoreService {
         status: 'Agendada',
         sessaoNumero: i + 1,
         totalSessoes: quantidade,
-        // Salvando os novos dados
         formaPagamento: formaPagamento,
         convenio: convenio,
         parcelamento: parcelamento,
+        statusPagamento: statusPagamento,
       );
       batch.set(docRef, {'sessoes': {hora: novaSessao.toMap()}}, SetOptions(merge: true));
     }
@@ -181,9 +180,6 @@ class FirestoreService {
     List<DocumentSnapshot> sessoesEncontradas = [];
     final sessaoAgendada = horario.sessaoAgendada;
 
-    // *** LINHA CORRIGIDA ***
-    // Se não há uma sessão agendada ou se a sessão não tem um ID de agendamento,
-    // significa que é uma sessão única ou um horário vago. Não há sessões "seguintes".
     if (sessaoAgendada == null || sessaoAgendada.agendamentoId.isEmpty) {
       if (includeCurrent && sessaoAgendada != null) {
         final docId = DateFormat('yyyy-MM-dd').format(startDate);
@@ -224,8 +220,6 @@ class FirestoreService {
     List<DocumentSnapshot> sessoesEncontradas = [];
     final sessaoAgendada = horario.sessaoAgendada;
 
-    // *** LINHA CORRIGIDA ***
-    // Fazemos uma checagem segura para garantir que sessaoAgendada e seus campos não são nulos.
     if (sessaoAgendada == null || sessaoAgendada.agendamentoId.isEmpty || sessaoAgendada.agendamentoStartDate == null) {
       throw Exception("Dados do agendamento incompletos para buscar todas as sessões.");
     }

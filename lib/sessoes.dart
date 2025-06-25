@@ -1,4 +1,3 @@
-// File: lib/sessoes.dart
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:table_calendar/table_calendar.dart';
@@ -389,7 +388,6 @@ class _SessoesState extends State<Sessoes> {
                         },
                       ),
                       const SizedBox(height: 16),
-                      // -- ALTERAÇÃO AQUI --
                       DropdownButtonFormField<String>(
                         value: formaPagamentoValue,
                         decoration: const InputDecoration(labelText: 'Forma de Pagamento', border: OutlineInputBorder(), isDense: true),
@@ -405,7 +403,6 @@ class _SessoesState extends State<Sessoes> {
                         },
                         validator: (v) => v == null ? 'Selecione uma forma de pagamento' : null,
                       ),
-                      // -- ALTERAÇÃO AQUI --
                       if (formaPagamentoValue == 'Convênio') ...[
                         const SizedBox(height: 16),
                         TextFormField(
@@ -414,7 +411,6 @@ class _SessoesState extends State<Sessoes> {
                           validator: (v) => (v == null || v.isEmpty) ? 'Nome do convênio é obrigatório' : null,
                         ),
                       ],
-                      // -- ALTERAÇÃO AQUI --
                       if (formaPagamentoValue == 'PIX' || formaPagamentoValue == 'Dinheiro') ...[
                         const SizedBox(height: 16),
                         DropdownButtonFormField<String>(
@@ -441,7 +437,7 @@ class _SessoesState extends State<Sessoes> {
                   onPressed: () async {
                     if (formKey.currentState!.validate()) {
                       setState(() => _isSaving = true);
-                      Navigator.of(context).pop(); // Fecha o popup antes de salvar
+                      Navigator.of(context).pop(); 
                       try {
                         await _firestoreService.agendarSessoesRecorrentes(
                           startDate: _selectedDay!,
@@ -452,6 +448,7 @@ class _SessoesState extends State<Sessoes> {
                           formaPagamento: formaPagamentoValue,
                           convenio: convenioController.text.isNotEmpty ? convenioController.text : null,
                           parcelamento: parcelamentoValue,
+                          statusPagamento: 'Pendente',
                         );
                         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Sessões agendadas com sucesso!')));
                         _reloadDataAfterAction();

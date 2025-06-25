@@ -1,5 +1,8 @@
 flutter run -d web-server
 
+flutter clean 
+flutter build apk --debug
+
 Excelente escolha! A abordagem de um Web App é realmente estratégica para o seu cenário, pois contorna a necessidade de instalações locais e oferece muita flexibilidade.
 
 Vamos começar dividindo o projeto em fases, com foco nas decisões e passos iniciais:
