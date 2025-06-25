@@ -10,6 +10,7 @@ class SessaoAgendada {
   final int totalSessoes;
   final bool reagendada;
   final Timestamp? desmarcadaEm;
+  String? observacoes; // <-- CAMPO ADICIONADO
 
   final String? formaPagamento;
   final String? convenio;
@@ -17,7 +18,7 @@ class SessaoAgendada {
   String? statusPagamento;
   Timestamp? dataPagamentoGuia;
   Map<String, dynamic>? pagamentosParcelados;
-  Timestamp? dataPagamentoSessao; // Novo campo para data de pagamento individual
+  Timestamp? dataPagamentoSessao;
 
   SessaoAgendada({
     required this.agendamentoId,
@@ -29,6 +30,7 @@ class SessaoAgendada {
     required this.totalSessoes,
     this.reagendada = false,
     this.desmarcadaEm,
+    this.observacoes, // <-- CAMPO ADICIONADO
     this.formaPagamento,
     this.convenio,
     this.parcelamento,
@@ -49,6 +51,7 @@ class SessaoAgendada {
       totalSessoes: map['totalSessoes'] ?? 0,
       reagendada: map['reagendada'] ?? false,
       desmarcadaEm: map['desmarcadaEm'],
+      observacoes: map['observacoes'], // <-- CAMPO ADICIONADO
       formaPagamento: map['formaPagamento'],
       convenio: map['convenio'],
       parcelamento: map['parcelamento'],
@@ -72,6 +75,7 @@ class SessaoAgendada {
       'totalSessoes': totalSessoes,
       'reagendada': reagendada,
       if (desmarcadaEm != null) 'desmarcadaEm': desmarcadaEm,
+      if (observacoes != null) 'observacoes': observacoes, // <-- CAMPO ADICIONADO
       if (formaPagamento != null) 'formaPagamento': formaPagamento,
       if (convenio != null) 'convenio': convenio,
       if (parcelamento != null) 'parcelamento': parcelamento,

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
+import 'evolucao_paciente.dart';
 
 class PacientesPage extends StatefulWidget {
   const PacientesPage({super.key});
@@ -223,10 +224,11 @@ class _PacientesPageState extends State<PacientesPage> {
                 return ListView(
                   children: snapshot.data!.docs.map((doc) {
                     final data = doc.data() as Map<String, dynamic>;
+                    final pacienteNome = data['nome'] ?? 'Nome não informado';
                     return Card(
                       margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 6.0),
                       child: ListTile(
-                        title: Text(data['nome'] ?? 'Nome não informado', style: const TextStyle(fontWeight: FontWeight.bold)),
+                        title: Text(pacienteNome, style: const TextStyle(fontWeight: FontWeight.bold)),
                         subtitle: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -234,11 +236,24 @@ class _PacientesPageState extends State<PacientesPage> {
                             Text('Telefone: ${data['telefoneResponsavel'] ?? 'N/A'}'),
                           ],
                         ),
-                        onTap: () => _showAddOrEditPacienteDialog(docId: doc.id, initialData: data),
+                        // =======================================================================
+                        // ONTAP MODIFICADO: Navega para a tela de evolução
+                        // =======================================================================
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => EvolucaoPacientePage(
+                                pacienteId: doc.id,
+                                pacienteNome: pacienteNome,
+                              ),
+                            ),
+                          );
+                        },
                         trailing: IconButton(
-                          icon: const Icon(Icons.delete_outline, color: Colors.red),
-                          tooltip: 'Excluir Paciente',
-                          onPressed: () => _deletePaciente(doc.id),
+                          icon: const Icon(Icons.edit_note, color: Colors.blueGrey),
+                          tooltip: 'Editar Cadastro do Paciente',
+                          onPressed: () => _showAddOrEditPacienteDialog(docId: doc.id, initialData: data),
                         ),
                       ),
                     );

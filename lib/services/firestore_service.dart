@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 import '../models/horario_model.dart';
+import '../controle_pagamentos.dart';
 
 class FirestoreService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
@@ -362,5 +363,87 @@ class FirestoreService {
 
     sessoesEncontradas.sort((a,b) => a.id.compareTo(b.id));
     return sessoesEncontradas;
+  }
+
+  Future<Map<String, List<SessaoComData>>> getSessoesPorPaciente(String pacienteId) async {
+    final Map<String, List<SessaoComData>> sessoesAgrupadas = {};
+    final querySnapshot = await _db.collection(_sessoesAgendadasCollection).get();
+
+    for (var doc in querySnapshot.docs) {
+      if (!doc.exists || !doc.data().containsKey('sessoes')) continue;
+
+      final dataDaSessao = DateFormat('yyyy-MM-dd').parse(doc.id);
+      final sessoesDoDia = doc.data()['sessoes'] as Map<String, dynamic>;
+
+      sessoesDoDia.forEach((hora, sessaoData) {
+        if (sessaoData['pacienteId'] == pacienteId) {
+          final sessao = SessaoAgendada.fromMap(sessaoData as Map<String, dynamic>);
+          final sessaoComData = SessaoComData(sessao, dataDaSessao);
+          
+          if (sessoesAgrupadas.containsKey(sessao.agendamentoId)) {
+            sessoesAgrupadas[sessao.agendamentoId]!.add(sessaoComData);
+          } else {
+            sessoesAgrupadas[sessao.agendamentoId] = [sessaoComData];
+          }
+        }
+      });
+    }
+
+    sessoesAgrupadas.forEach((key, value) {
+      value.sort((a, b) => a.data.compareTo(b.data));
+    });
+
+    return sessoesAgrupadas;
+  }
+
+  // =======================================================================
+  // NOVA FUNÇÃO: Atualiza o status e as observações de uma sessão
+  // =======================================================================
+  Future<void> updateStatusSessao({
+    required DateTime data,
+    required String agendamentoId,
+    required String novoStatus,
+  }) async {
+    final docId = DateFormat('yyyy-MM-dd').format(data);
+    final docRef = _db.collection(_sessoesAgendadasCollection).doc(docId);
+    
+    final docSnapshot = await docRef.get();
+    if (!docSnapshot.exists) return;
+
+    final sessoes = (docSnapshot.data() as Map<String, dynamic>)['sessoes'] as Map<String, dynamic>;
+    String? horaSessao;
+    sessoes.forEach((hora, sessaoData) {
+      if (sessaoData['agendamentoId'] == agendamentoId) {
+        horaSessao = hora;
+      }
+    });
+
+    if (horaSessao != null) {
+      await docRef.update({'sessoes.$horaSessao.status': novoStatus});
+    }
+  }
+  
+  Future<void> updateObservacoesSessao({
+    required DateTime data,
+    required String agendamentoId,
+    required String observacoes,
+  }) async {
+    final docId = DateFormat('yyyy-MM-dd').format(data);
+    final docRef = _db.collection(_sessoesAgendadasCollection).doc(docId);
+    
+    final docSnapshot = await docRef.get();
+    if (!docSnapshot.exists) return;
+
+    final sessoes = (docSnapshot.data() as Map<String, dynamic>)['sessoes'] as Map<String, dynamic>;
+    String? horaSessao;
+    sessoes.forEach((hora, sessaoData) {
+      if (sessaoData['agendamentoId'] == agendamentoId) {
+        horaSessao = hora;
+      }
+    });
+
+    if (horaSessao != null) {
+      await docRef.update({'sessoes.$horaSessao.observacoes': observacoes});
+    }
   }
 }
