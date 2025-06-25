@@ -103,59 +103,77 @@ class FirestoreService {
     await batch.commit();
   }
   
+  // =======================================================================
+  // FUNÇÃO MODIFICADA E CORRIGIDA
+  // =======================================================================
   Future<void> desmarcarSessaoUnicaEReagendar(Horario horario, DateTime dia) async {
     final sessaoOriginal = horario.sessaoAgendada;
     if (sessaoOriginal == null) return;
 
-    final WriteBatch batch = _db.batch();
+    final writeBatch = _db.batch();
     final horaSessao = horario.hora;
 
-    // 1. Marca a sessão atual como Desmarcada
+    // 1. Marca a sessão atual como 'Desmarcada'
     final docIdAtual = DateFormat('yyyy-MM-dd').format(dia);
     final refAtual = _db.collection(_sessoesAgendadasCollection).doc(docIdAtual);
-    batch.update(refAtual, {
+    writeBatch.update(refAtual, {
       'sessoes.$horaSessao.status': 'Desmarcada',
       'sessoes.$horaSessao.desmarcadaEm': Timestamp.now(),
     });
 
-    // 2. Encontra todas as sessões futuras do mesmo agendamento
-    final sessoesFuturas = (await _findAllSessionsAfter(horario, dia))
-      .where((doc) => doc.get('sessoes.$horaSessao.status') == 'Agendada').toList();
+    // 2. Encontra todas as sessões do mesmo agendamento para reordenar
+    final todasAsSessoesDoAgendamento = await _findAllSessionsInAgendamento(horario);
+    
+    // Filtra apenas as sessões futuras que estão 'Agendada'
+    final sessoesFuturasAgendadas = todasAsSessoesDoAgendamento
+        .where((doc) {
+          final dataDoc = DateFormat('yyyy-MM-dd').parseUtc(doc.id);
+          // Considera apenas as sessões estritamente após a data da sessão desmarcada
+          return dataDoc.isAfter(dia) &&
+                 (doc.data() as Map<String, dynamic>).containsKey('sessoes') &&
+                 ((doc.data() as Map<String, dynamic>)['sessoes'] as Map<String, dynamic>).containsKey(horaSessao) &&
+                 (doc.data() as Map<String, dynamic>)['sessoes'][horaSessao]['status'] == 'Agendada';
+        })
+        .toList();
+    
+    // 3. Renumera as sessões futuras (n-1)
+    for (final doc in sessoesFuturasAgendadas) {
+        final sessaoData = (doc.data() as Map<String, dynamic>)['sessoes'][horaSessao];
+        final sessao = SessaoAgendada.fromMap(sessaoData);
 
-    // 3. Renumera e move as sessões futuras
-    for (var doc in sessoesFuturas) {
-      final sessaoData = doc.get('sessoes.$horaSessao');
-      final sessao = SessaoAgendada.fromMap(sessaoData);
-      
-      final novaSessao = sessao;
-      novaSessao.status = 'Agendada';
-      batch.set(doc.reference, {'sessoes': {horaSessao: novaSessao.toMap()}}, SetOptions(merge: true));
+        if (sessao.sessaoNumero > sessaoOriginal.sessaoNumero) {
+            final dadosAtualizados = sessao.toMap();
+            dadosAtualizados['sessaoNumero'] = sessao.sessaoNumero - 1;
+            writeBatch.update(doc.reference, {'sessoes.$horaSessao': dadosAtualizados});
+        }
     }
 
     // 4. Adiciona uma nova sessão ao final
-    final ultimaSessaoDoc = sessoesFuturas.isNotEmpty ? sessoesFuturas.last : (await _findAllSessionsInAgendamento(horario)).last;
-    final ultimaData = DateFormat('yyyy-MM-dd').parse(ultimaSessaoDoc.id);
-    final novaDataFinal = ultimaData.add(const Duration(days: 7));
-    final novoDocIdFinal = DateFormat('yyyy-MM-dd').format(novaDataFinal);
-    final refNovaFinal = _db.collection(_sessoesAgendadasCollection).doc(novoDocIdFinal);
-      
-    final novaSessaoFinal = SessaoAgendada(
-        agendamentoId: sessaoOriginal.agendamentoId,
-        agendamentoStartDate: sessaoOriginal.agendamentoStartDate,
-        pacienteId: sessaoOriginal.pacienteId,
-        pacienteNome: sessaoOriginal.pacienteNome,
-        status: 'Agendada',
-        sessaoNumero: sessaoOriginal.totalSessoes,
-        totalSessoes: sessaoOriginal.totalSessoes,
-        formaPagamento: sessaoOriginal.formaPagamento,
-        convenio: sessaoOriginal.convenio,
-        parcelamento: sessaoOriginal.parcelamento,
-        statusPagamento: 'Pendente',
-        pagamentosParcelados: sessaoOriginal.pagamentosParcelados,
-      );
-    batch.set(refNovaFinal, {'sessoes': {horaSessao: novaSessaoFinal.toMap()}}, SetOptions(merge: true));
-    
-    await batch.commit();
+    if (todasAsSessoesDoAgendamento.isNotEmpty) {
+        final ultimaSessaoDoc = todasAsSessoesDoAgendamento.last;
+        final ultimaData = DateFormat('yyyy-MM-dd').parseUtc(ultimaSessaoDoc.id);
+        final novaDataFinal = ultimaData.add(const Duration(days: 7));
+        final novoDocIdFinal = DateFormat('yyyy-MM-dd').format(novaDataFinal);
+        final refNovaFinal = _db.collection(_sessoesAgendadasCollection).doc(novoDocIdFinal);
+        
+        final novaSessaoFinal = SessaoAgendada(
+            agendamentoId: sessaoOriginal.agendamentoId,
+            agendamentoStartDate: sessaoOriginal.agendamentoStartDate,
+            pacienteId: sessaoOriginal.pacienteId,
+            pacienteNome: sessaoOriginal.pacienteNome,
+            status: 'Agendada',
+            sessaoNumero: sessaoOriginal.totalSessoes,
+            totalSessoes: sessaoOriginal.totalSessoes,
+            formaPagamento: sessaoOriginal.formaPagamento,
+            convenio: sessaoOriginal.convenio,
+            parcelamento: sessaoOriginal.parcelamento,
+            statusPagamento: 'Pendente', // A nova sessão sempre começa como pendente
+            pagamentosParcelados: sessaoOriginal.pagamentosParcelados,
+        );
+        writeBatch.set(refNovaFinal, {'sessoes': {horaSessao: novaSessaoFinal.toMap()}}, SetOptions(merge: true));
+    }
+
+    await writeBatch.commit();
   }
 
   Future<void> desmarcarSessoesRestantes(Horario horario, DateTime dia) async {
@@ -182,10 +200,18 @@ class FirestoreService {
       'sessoes.$horaSessao.desmarcadaEm': FieldValue.delete(),
     });
 
-    // 2. Encontra a última sessão e a remove
+    // 2. Encontra a última sessão agendada e a remove para manter o total de 10
     final sessoesDoAgendamento = await _findAllSessionsInAgendamento(horario);
-    if (sessoesDoAgendamento.isNotEmpty) {
-      final ultimaSessaoDoc = sessoesDoAgendamento.last;
+    final sessoesAgendadas = sessoesDoAgendamento.where((doc) {
+        final data = doc.data() as Map<String, dynamic>;
+        return data.containsKey('sessoes') && 
+               data['sessoes'].containsKey(horaSessao) &&
+               data['sessoes'][horaSessao]['status'] == 'Agendada';
+    }).toList();
+
+
+    if (sessoesAgendadas.isNotEmpty) {
+      final ultimaSessaoDoc = sessoesAgendadas.last;
       batch.update(ultimaSessaoDoc.reference, {'sessoes.$horaSessao': FieldValue.delete()});
     }
 
@@ -290,23 +316,25 @@ class FirestoreService {
     if (sessaoAgendada == null || sessaoAgendada.agendamentoId.isEmpty) {
       return sessoesEncontradas;
     }
+    
+    // As datas no ID do documento estão como YYYY-MM-DD
+    final startDateId = DateFormat('yyyy-MM-dd').format(startDate.toUtc());
 
-    final querySnapshot = await _db.collection(_sessoesAgendadasCollection).get();
+    final querySnapshot = await _db
+        .collection(_sessoesAgendadasCollection)
+        .where(FieldPath.documentId, isGreaterThanOrEqualTo: startDateId)
+        .get();
+
     for (var doc in querySnapshot.docs) {
-      if (!doc.exists || !doc.data().containsKey('sessoes')) continue;
-      final sessoes = doc.data()['sessoes'] as Map<String, dynamic>;
-      sessoes.forEach((hora, sessaoData) {
-        if (sessaoData['agendamentoId'] == sessaoAgendada.agendamentoId) {
-            final dataDoc = DateFormat('yyyy-MM-dd').parse(doc.id);
-            if(dataDoc.isAtSameMomentAs(startDate.toUtc()) || dataDoc.isAfter(startDate.toUtc())) {
-              if (dataDoc.isAtSameMomentAs(startDate.toUtc()) && includeCurrent) {
-                if(!sessoesEncontradas.any((d) => d.id == doc.id)) sessoesEncontradas.add(doc);
-              } else if (dataDoc.isAfter(startDate.toUtc())) {
-                if(!sessoesEncontradas.any((d) => d.id == doc.id)) sessoesEncontradas.add(doc);
-              }
+        if (!doc.exists || !(doc.data()).containsKey('sessoes')) continue;
+
+        final sessoes = doc.data()['sessoes'] as Map<String, dynamic>;
+        if (sessoes.containsKey(horario.hora) && sessoes[horario.hora]['agendamentoId'] == sessaoAgendada.agendamentoId) {
+            if (doc.id == startDateId && !includeCurrent) {
+                continue;
             }
+            sessoesEncontradas.add(doc);
         }
-      });
     }
     
     sessoesEncontradas.sort((a,b) => a.id.compareTo(b.id));

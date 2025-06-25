@@ -4,6 +4,14 @@ import 'package:intl/intl.dart';
 import 'models/horario_model.dart';
 import 'services/firestore_service.dart';
 
+// Classe auxiliar para armazenar a sessão junto com sua data específica
+class SessaoComData {
+  final SessaoAgendada sessao;
+  final DateTime data;
+
+  SessaoComData(this.sessao, this.data);
+}
+
 class ControlePagamentosPage extends StatefulWidget {
   const ControlePagamentosPage({super.key});
 
@@ -13,7 +21,8 @@ class ControlePagamentosPage extends StatefulWidget {
 
 class _ControlePagamentosPageState extends State<ControlePagamentosPage> {
   final FirestoreService _firestoreService = FirestoreService();
-  Map<String, List<SessaoAgendada>> _sessoesPorAgendamento = {};
+  // Estrutura de dados alterada para usar a classe auxiliar
+  Map<String, List<SessaoComData>> _sessoesPorAgendamento = {};
   Map<String, String> _horaPorAgendamento = {};
   bool _isLoading = true;
 
@@ -28,29 +37,38 @@ class _ControlePagamentosPageState extends State<ControlePagamentosPage> {
     try {
       final snapshot = await FirebaseFirestore.instance.collection('sessoes_agendadas').get();
       
-      final Map<String, List<SessaoAgendada>> sessoesAgrupadas = {};
+      final Map<String, List<SessaoComData>> sessoesAgrupadas = {};
       final Map<String, String> horaAgrupada = {};
 
       for (var doc in snapshot.docs) {
         if (!doc.exists || !doc.data().containsKey('sessoes')) continue;
+        
+        // =======================================================================
+        // CORREÇÃO FINAL: Usa .parse() em vez de .parseUtc()
+        // Isso trata a data do Firestore (ex: "2024-06-25") como uma data local,
+        // ignorando o fuso horário e resolvendo o problema do "dia a menos".
+        // =======================================================================
+        final dataDaSessao = DateFormat('yyyy-MM-dd').parse(doc.id);
         final sessoesDoDia = doc.data()['sessoes'] as Map<String, dynamic>;
 
         sessoesDoDia.forEach((hora, sessaoData) {
           final sessao = SessaoAgendada.fromMap(sessaoData as Map<String, dynamic>);
           
-          if(sessao.status == 'Agendada' && sessao.agendamentoId.isNotEmpty) {
-             horaAgrupada.putIfAbsent(sessao.agendamentoId, () => hora);
+          if ((sessao.status == 'Agendada' || sessao.status == 'Desmarcada') && sessao.agendamentoId.isNotEmpty) {
+            final sessaoComData = SessaoComData(sessao, dataDaSessao);
+
+            horaAgrupada.putIfAbsent(sessao.agendamentoId, () => hora);
             if (sessoesAgrupadas.containsKey(sessao.agendamentoId)) {
-              sessoesAgrupadas[sessao.agendamentoId]!.add(sessao);
+              sessoesAgrupadas[sessao.agendamentoId]!.add(sessaoComData);
             } else {
-              sessoesAgrupadas[sessao.agendamentoId] = [sessao];
+              sessoesAgrupadas[sessao.agendamentoId] = [sessaoComData];
             }
           }
         });
       }
 
       sessoesAgrupadas.forEach((key, value) {
-        value.sort((a, b) => a.sessaoNumero.compareTo(b.sessaoNumero));
+        value.sort((a, b) => a.data.compareTo(b.data));
       });
 
       setState(() {
@@ -337,11 +355,12 @@ class _ControlePagamentosPageState extends State<ControlePagamentosPage> {
                     itemCount: _sessoesPorAgendamento.keys.length,
                     itemBuilder: (context, index) {
                       final agendamentoId = _sessoesPorAgendamento.keys.elementAt(index);
-                      final sessoes = _sessoesPorAgendamento[agendamentoId]!;
-                      final sessaoRef = sessoes.first;
+                      final sessoesComData = _sessoesPorAgendamento[agendamentoId]!;
+                      final sessaoRef = sessoesComData.first.sessao;
                       final pacienteNome = sessaoRef.pacienteNome;
 
                       if (sessaoRef.formaPagamento == 'Convênio') {
+                         final sessoesDeConvenio = sessoesComData.map((scd) => scd.sessao).toList();
                         final status = sessaoRef.dataPagamentoGuia != null ? 'Recebido' : 'Pendente';
                         final dataPagamento = sessaoRef.dataPagamentoGuia != null
                             ? DateFormat('dd/MM/yyyy', 'pt_BR').format(sessaoRef.dataPagamentoGuia!.toDate().toLocal())
@@ -360,7 +379,7 @@ class _ControlePagamentosPageState extends State<ControlePagamentosPage> {
                                 Text(dataPagamento, style: const TextStyle(fontSize: 12)),
                               ],
                             ),
-                            onTap: () => _showConvenioPopup(sessoes),
+                            onTap: () => _showConvenioPopup(sessoesDeConvenio),
                           ),
                         );
                       }
@@ -411,21 +430,33 @@ class _ControlePagamentosPageState extends State<ControlePagamentosPage> {
                         child: ExpansionTile(
                           title: Text(pacienteNome, style: const TextStyle(fontWeight: FontWeight.bold)),
                           subtitle: Text("Pagamento: ${sessaoRef.formaPagamento ?? 'N/A'} - Por Sessão"),
-                          children: sessoes.map((sessao) {
-                             final dataSessao = sessao.agendamentoStartDate.toDate().add(Duration(days: (sessao.sessaoNumero - 1) * 7));
-                             final dataFormatada = DateFormat('dd/MM/yyyy', 'pt_BR').format(dataSessao.toLocal());
+                          children: sessoesComData.map((sessaoComData) {
+                             final sessao = sessaoComData.sessao;
+                             // =======================================================================
+                             // CORREÇÃO FINAL: Usa a data já corrigida e não a recalcula
+                             // =======================================================================
+                             final dataFormatada = DateFormat('dd/MM/yyyy', 'pt_BR').format(sessaoComData.data);
                              final statusPagamento = sessao.statusPagamento ?? 'Pendente';
+                             final isDesmarcada = sessao.status == 'Desmarcada';
 
                             return ListTile(
-                              title: Text('Sessão ${sessao.sessaoNumero} - $dataFormatada'),
-                              trailing: Text(
-                                statusPagamento,
+                              onTap: isDesmarcada ? null : () => _showSessaoUnicaPopup(sessao),
+                              tileColor: isDesmarcada ? Colors.grey.shade300 : null,
+                              title: Text(
+                                'Sessão ${sessao.sessaoNumero} - $dataFormatada',
                                 style: TextStyle(
-                                  color: (statusPagamento == 'Pago') ? Colors.green : Colors.red,
+                                  decoration: isDesmarcada ? TextDecoration.lineThrough : TextDecoration.none,
+                                ),
+                              ),
+                              trailing: Text(
+                                isDesmarcada ? 'Desmarcada' : statusPagamento,
+                                style: TextStyle(
+                                  color: isDesmarcada
+                                    ? Colors.grey.shade700
+                                    : (statusPagamento == 'Pago' ? Colors.green : Colors.red),
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
-                              onTap: () => _showSessaoUnicaPopup(sessao),
                             );
                           }).toList(),
                         ),

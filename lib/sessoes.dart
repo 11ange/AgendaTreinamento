@@ -116,19 +116,43 @@ class _SessoesState extends State<Sessoes> {
     }
   }
 
-  Future<void> _handleBloquearHorario(String hora, {bool desmarcando = false}) async {
+  // =======================================================================
+  // FUNÇÃO MODIFICADA E CORRIGIDA
+  // =======================================================================
+  Future<void> _handleBloquearHorario(Horario horario, {bool desmarcando = false}) async {
+    // Se a ação é em um horário já agendado (desmarcando e bloqueando)
     if (desmarcando) {
-        final confirmar = await _showConfirmationDialog("Bloquear e Desmarcar?", "Esta ação irá desmarcar a sessão e bloquear o horário. Deseja continuar?");
+        final confirmar = await _showConfirmationDialog(
+            "Bloquear e Desmarcar?", 
+            "Esta ação irá desmarcar a sessão do paciente (reagendando as futuras) e depois bloquear este horário. Deseja continuar?"
+        );
         if (confirmar != true) return;
-    }
-    setState(() => _isSaving = true);
-    try {
-      await _firestoreService.bloquearHorario(_selectedDay!, hora);
-      await _reloadDataAfterAction();
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erro ao bloquear: ${e.toString()}')));
-    } finally {
-      if (mounted) setState(() => _isSaving = false);
+        
+        setState(() => _isSaving = true);
+        try {
+          // 1. Executa a lógica de desmarcar, que cuida do reagendamento do paciente
+          await _firestoreService.desmarcarSessaoUnicaEReagendar(horario, _selectedDay!);
+          // 2. Bloqueia o horário que agora está livre (ou com status "Desmarcada")
+          await _firestoreService.bloquearHorario(_selectedDay!, horario.hora);
+          
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Sessão desmarcada e horário bloqueado!')));
+          await _reloadDataAfterAction();
+        } catch (e, s) {
+            print('Erro ao desmarcar e bloquear: $e\n$s');
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erro ao desmarcar e bloquear: ${e.toString()}')));
+        } finally {
+            if (mounted) setState(() => _isSaving = false);
+        }
+    } else { // Se a ação é em um horário disponível
+        setState(() => _isSaving = true);
+        try {
+          await _firestoreService.bloquearHorario(_selectedDay!, horario.hora);
+          await _reloadDataAfterAction();
+        } catch (e) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erro ao bloquear: ${e.toString()}')));
+        } finally {
+          if (mounted) setState(() => _isSaving = false);
+        }
     }
   }
   
@@ -241,7 +265,6 @@ class _SessoesState extends State<Sessoes> {
     if (_horariosDoDia.isEmpty) {
       return const Center(child: Text("Nenhum horário de trabalho definido para este dia."));
     }
-    // Simplificação: A lista já vem do service com tudo que precisa ser renderizado.
     return ListView.builder(
       padding: const EdgeInsets.all(8.0),
       itemCount: _horariosDoDia.length,
@@ -272,7 +295,7 @@ class _SessoesState extends State<Sessoes> {
               }
             }
           ),
-          IconButton(icon: const Icon(Icons.block, color: Colors.grey, size: 20), tooltip: "Bloquear", onPressed: () => _handleBloquearHorario(horario.hora)),
+          IconButton(icon: const Icon(Icons.block, color: Colors.grey, size: 20), tooltip: "Bloquear", onPressed: () => _handleBloquearHorario(horario)),
         ];
         break;
       case 'Agendada':
@@ -285,7 +308,7 @@ class _SessoesState extends State<Sessoes> {
         );
         actions = [
           TextButton(child: const Text("Desmarcar"), onPressed: () => _handleDesmarcarSessao(horario)),
-          IconButton(icon: const Icon(Icons.block, color: Colors.grey, size: 20), tooltip: "Bloquear e Desmarcar", onPressed: () => _handleBloquearHorario(horario.hora, desmarcando: true)),
+          IconButton(icon: const Icon(Icons.block, color: Colors.grey, size: 20), tooltip: "Bloquear e Desmarcar", onPressed: () => _handleBloquearHorario(horario, desmarcando: true)),
         ];
         break;
       case 'Desmarcada':
