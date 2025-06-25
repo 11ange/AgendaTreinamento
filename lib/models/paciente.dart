@@ -1,4 +1,3 @@
-// 11ange/agendatreinamento/AgendaTreinamento-f667d20bbd422772da4aba80e9e5223229c98088/lib/models/paciente.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class Paciente {

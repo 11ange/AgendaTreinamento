@@ -1,4 +1,3 @@
-// 11ange/agendatreinamento/AgendaTreinamento-f667d20bbd422772da4aba80e9e5223229c98088/lib/main.dart
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:intl/date_symbol_data_local.dart'; // Importe esta linha
@@ -34,8 +33,6 @@ class MyApp extends StatelessWidget {
       supportedLocales: const [
         Locale('en', ''), // Inglês
         Locale('pt', 'BR'), // Português do Brasil
-        Locale('pt', 'PT'), // Português de Portugal (se você precisar de ambos)
-        // Adicione outros idiomas que seu aplicativo suporta
       ],
       home: const LoginPage(),
     );
@@ -113,14 +110,12 @@ class _LoginPageState extends State<LoginPage> {
                 width: double.infinity, // Ocupa a largura total do Container
                 child: ElevatedButton(
                   onPressed: () {
-                    print('Botão Login clicado!');
                     final username = _usernameController.text;
                     final password = _passwordController.text;
 
                     if (username == 'teste' && password == 'teste') {
                     //if ((username == 'seu_usuario' && password == 'sua_senha') ||
                     //    (username == 'fono_usuario' && password == 'fono_senha')) {
-                      print('Login bem-sucedido para: $username');
                       // Navegar para a MainPage
                       Navigator.push(
                         context,

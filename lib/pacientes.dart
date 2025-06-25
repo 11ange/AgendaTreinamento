@@ -1,4 +1,3 @@
-// 11ange/agendatreinamento/AgendaTreinamento-f667d20bbd422772da4aba80e9e5223229c98088/lib/pacientes.dart
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
@@ -228,7 +227,6 @@ class _PacientesPageState extends State<PacientesPage> {
                       margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 6.0),
                       child: ListTile(
                         title: Text(data['nome'] ?? 'Nome não informado', style: const TextStyle(fontWeight: FontWeight.bold)),
-                        // --- ALTERAÇÃO AQUI ---
                         subtitle: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [

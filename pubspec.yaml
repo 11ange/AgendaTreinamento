@@ -16,7 +16,7 @@ dependencies:
 
   # Utilitários
   cupertino_icons: ^1.0.8
-  intl: ^0.20.2 # Corrigido para a versão exigida pelo Flutter SDK
+  intl: ^0.20.2
   table_calendar: ^3.1.2
 
   # Dependências do Firebase (Conjunto de versões compatíveis)
