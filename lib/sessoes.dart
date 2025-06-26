@@ -225,6 +225,7 @@ class _SessoesState extends State<Sessoes> {
         preferredSize: const Size.fromHeight(45.0), 
         child: AppBar(
           title: const Text('Sessões'),
+          backgroundColor: Colors.blue, // Cor de fundo da AppBar          
           centerTitle: true,
         ),
       ),

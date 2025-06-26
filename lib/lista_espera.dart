@@ -189,6 +189,7 @@ class _ListaEsperaPageState extends State<ListaEsperaPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Lista de Espera'),
+        backgroundColor: Colors.blue, // Cor de fundo da AppBar
         centerTitle: true,
       ),
       body: Column(

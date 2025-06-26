@@ -65,7 +65,7 @@ class MainPage extends StatelessWidget {
                     onPressed: () {
                       Navigator.push(context, MaterialPageRoute(builder: (context) => const ListaEsperaPage()));
                     },
-                    style: ElevatedButton.styleFrom(backgroundColor: Colors.amber[700]),
+                    //style: ElevatedButton.styleFrom(backgroundColor: Colors.amber[700]),
                     child: const Text('Lista Espera'),
                   ),
                   // --- NOVO BOTÃO DE PAGAMENTOS ---
@@ -73,7 +73,7 @@ class MainPage extends StatelessWidget {
                     onPressed: () {
                       Navigator.push(context, MaterialPageRoute(builder: (context) => const ControlePagamentosPage()));
                     },
-                    style: ElevatedButton.styleFrom(backgroundColor: Colors.green[700]),
+                    //style: ElevatedButton.styleFrom(backgroundColor: Colors.green[700]),
                     child: const Text('Pagamentos'),
                   ),
                 ],

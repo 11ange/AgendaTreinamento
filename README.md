@@ -1,9 +1,56 @@
+# Agenda Treinamento Web
+
+## Sumário
+- [Descrição](#descrição)
+- [Como rodar o projeto](#como-rodar-o-projeto)
+- [Estrutura de Pastas](#estrutura-de-pastas)
+- [Exemplo de Uso](#exemplo-de-uso)
+- [Roteiro de Desenvolvimento](#roteiro-de-desenvolvimento)
+- [Contribuição](#contribuição)
+- [Licença](#licença)
+
+## Descrição
+Sistema de agendamento de sessões para clínicas, consultórios ou profissionais autônomos, desenvolvido em Flutter Web com backend no Firebase. Permite controle de pacientes, agendamentos, sessões, pagamentos e lista de espera.
+
+## Como rodar o projeto
+```bash
+# Execute no terminal para rodar no navegador:
 flutter run -d web-server
 
-flutter clean 
+# Para limpar e gerar APK de debug:
+flutter clean
 flutter build apk --debug
+```
 
-Excelente escolha! A abordagem de um Web App é realmente estratégica para o seu cenário, pois contorna a necessidade de instalações locais e oferece muita flexibilidade.
+Pré-requisitos:
+- Flutter SDK >= 3.0.0
+- Conta no Firebase (opcional para testes locais)
+
+## Estrutura de Pastas
+```
+lib/
+  cadastro_agenda.dart         # Tela de cadastro de agendamentos
+  controle_pagamentos.dart     # Controle de pagamentos
+  evolucao_paciente.dart       # Evolução dos pacientes
+  firebase_options.dart        # Configuração do Firebase
+  lista_espera.dart            # Gerenciamento da lista de espera
+  main.dart                    # Ponto de entrada do app
+  pacientes.dart               # CRUD de pacientes
+  pagina_inicial.dart          # Tela inicial
+  sessoes.dart                 # Controle de sessões
+  models/                      # Modelos de dados
+  services/                    # Serviços (ex: Firestore)
+```
+
+## Exemplo de Uso
+- Cadastro de paciente
+- Agendamento de sessões
+- Controle de pagamentos
+- Gerenciamento de lista de espera
+
+> Implemente prints ou GIFs aqui para ilustrar o uso do sistema.
+
+## Roteiro de Desenvolvimento
 
 Vamos começar dividindo o projeto em fases, com foco nas decisões e passos iniciais:
 
@@ -174,3 +221,9 @@ Comece com as partes mais simples e avance para as mais complexas.
 ---
 
 Este é um roteiro detalhado. O ponto de partida é realmente a escolha e configuração do backend (Firebase é uma aposta segura) e o setup do seu ambiente de desenvolvimento na nuvem. Boa sorte!
+
+## Contribuição
+Contribuições são bem-vindas! Sinta-se à vontade para enviar um pull request ou sugerir melhorias.
+
+## Licença
+Este projeto está licenciado sob a Licença MIT - veja o arquivo [LICENSE](LICENSE) para detalhes.

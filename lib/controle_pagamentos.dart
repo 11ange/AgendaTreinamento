@@ -338,6 +338,7 @@ class _ControlePagamentosPageState extends State<ControlePagamentosPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Controle de Pagamentos'),
+        backgroundColor: Colors.blue, // Cor de fundo da AppBar
         centerTitle: true,
       ),
       body: _isLoading

@@ -33,9 +33,19 @@ class _EvolucaoPacientePageState extends State<EvolucaoPacientePage> {
   Future<void> _carregarSessoesDoPaciente() async {
     setState(() => _isLoading = true);
     try {
-      final sessoes = await _firestoreService.getSessoesPorPaciente(widget.pacienteId);
+      final sessoes =
+          await _firestoreService.getSessoesPorPaciente(widget.pacienteId);
+
+      // Ordena os agendamentos pela data de início da primeira sessão (mais recente primeiro)
+      final sortedEntries = sessoes.entries.toList()
+        ..sort((a, b) {
+          final dataA = a.value.first.data;
+          final dataB = b.value.first.data;
+          return dataB.compareTo(dataA);
+        });
+
       setState(() {
-        _sessoesPorAgendamento = sessoes;
+        _sessoesPorAgendamento = Map.fromEntries(sortedEntries);
         _isLoading = false;
       });
     } catch (e) {
@@ -47,16 +57,21 @@ class _EvolucaoPacientePageState extends State<EvolucaoPacientePage> {
       }
     }
   }
-  
-  Future<void> _atualizarStatusSessao(SessaoComData sessaoComData, String novoStatus) async {
+
+  Future<void> _atualizarStatusSessao(
+      SessaoComData sessaoComData, String novoStatus) async {
     final confirmar = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: Text('Confirmar Alteração'),
         content: Text('Deseja alterar o status desta sessão para "$novoStatus"?'),
         actions: [
-          TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Não')),
-          TextButton(onPressed: () => Navigator.of(context).pop(true), child: const Text('Sim')),
+          TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Não')),
+          TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Sim')),
         ],
       ),
     );
@@ -72,7 +87,8 @@ class _EvolucaoPacientePageState extends State<EvolucaoPacientePage> {
   }
 
   Future<void> _editarObservacoes(SessaoComData sessaoComData) async {
-    final observacoesController = TextEditingController(text: sessaoComData.sessao.observacoes);
+    final observacoesController =
+        TextEditingController(text: sessaoComData.sessao.observacoes);
     final result = await showDialog<String>(
       context: context,
       builder: (context) {
@@ -85,9 +101,12 @@ class _EvolucaoPacientePageState extends State<EvolucaoPacientePage> {
             autofocus: true,
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancelar')),
+            TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Cancelar')),
             ElevatedButton(
-              onPressed: () => Navigator.of(context).pop(observacoesController.text),
+              onPressed: () =>
+                  Navigator.of(context).pop(observacoesController.text),
               child: const Text('Salvar'),
             ),
           ],
@@ -105,35 +124,45 @@ class _EvolucaoPacientePageState extends State<EvolucaoPacientePage> {
     }
   }
 
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: Text('Evolução de ${widget.pacienteNome}'),
+        backgroundColor: Colors.blue,
         centerTitle: true,
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _sessoesPorAgendamento.isEmpty
-              ? const Center(child: Text('Nenhuma sessão encontrada para este paciente.'))
+              ? const Center(
+                  child: Text('Nenhuma sessão encontrada para este paciente.'))
               : ListView(
                   children: _sessoesPorAgendamento.entries.map((entry) {
                     final agendamentoId = entry.key;
                     final sessoes = entry.value;
-                    
+
+                    final dataInicio = sessoes.first.data;
+                    final dataFim = sessoes.last.data;
+                    final formatoData = DateFormat('dd/MM/yy', 'pt_BR');
+                    final periodo =
+                        '${formatoData.format(dataInicio)} - ${formatoData.format(dataFim)}';
+
                     return Card(
-                      margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                      margin: const EdgeInsets.symmetric(
+                          horizontal: 16.0, vertical: 8.0),
                       child: ExpansionTile(
-                        title: Text('Agendamento #${agendamentoId.substring(0, 6)}...'),
+                        title: Text(periodo),
                         initiallyExpanded: true,
                         children: sessoes.map((sessaoComData) {
                           final sessao = sessaoComData.sessao;
-                          final dataFormatada = DateFormat('dd/MM/yyyy', 'pt_BR').format(sessaoComData.data);
-                          
+                          final dataFormatada =
+                              DateFormat('dd/MM/yyyy', 'pt_BR')
+                                  .format(sessaoComData.data);
+
                           Color statusColor;
                           IconData statusIcon;
-                          switch(sessao.status) {
+                          switch (sessao.status) {
                             case 'Realizada':
                               statusColor = Colors.green;
                               statusIcon = Icons.check_circle;
@@ -154,15 +183,22 @@ class _EvolucaoPacientePageState extends State<EvolucaoPacientePage> {
                           return ListTile(
                             onTap: () => _editarObservacoes(sessaoComData),
                             leading: Icon(statusIcon, color: statusColor),
-                            title: Text('Sessão ${sessao.sessaoNumero} - $dataFormatada'),
-                            subtitle: sessao.observacoes != null && sessao.observacoes!.isNotEmpty
-                              ? Text(sessao.observacoes!, maxLines: 1, overflow: TextOverflow.ellipsis)
-                              : const Text('Sem observações', style: TextStyle(fontStyle: FontStyle.italic)),
+                            title: Text(
+                                'Sessão ${sessao.sessaoNumero} - $dataFormatada'),
+                            subtitle: sessao.observacoes != null &&
+                                    sessao.observacoes!.isNotEmpty
+                                ? Text(sessao.observacoes!,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis)
+                                : const Text('Sem observações',
+                                    style:
+                                        TextStyle(fontStyle: FontStyle.italic)),
                             trailing: PopupMenuButton<String>(
                               onSelected: (value) {
                                 _atualizarStatusSessao(sessaoComData, value);
                               },
-                              itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+                              itemBuilder: (BuildContext context) =>
+                                  <PopupMenuEntry<String>>[
                                 const PopupMenuItem<String>(
                                   value: 'Realizada',
                                   child: Text('Realizada'),
