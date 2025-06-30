@@ -189,7 +189,6 @@ class _ListaEsperaPageState extends State<ListaEsperaPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Lista de Espera'),
-        backgroundColor: Colors.blue, // Cor de fundo da AppBar
         centerTitle: true,
       ),
       body: Column(
@@ -208,7 +207,10 @@ class _ListaEsperaPageState extends State<ListaEsperaPage> {
           const Divider(),
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
-              stream: _firestore.collection('lista_espera').orderBy('timestamp', descending: true).snapshots(),
+              // =======================================================================
+              // ALTERAÇÃO: Ordenando pelos mais antigos primeiro
+              // =======================================================================
+              stream: _firestore.collection('lista_espera').orderBy('timestamp').snapshots(),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
@@ -227,7 +229,6 @@ class _ListaEsperaPageState extends State<ListaEsperaPage> {
                     return Card(
                       margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 6.0),
                       child: ListTile(
-                        // --- AÇÃO DE CLIQUE ATUALIZADA ---
                         onTap: () => _editarPessoa(docId, data),
                         title: Text(data['nome'] ?? 'Nome não informado'),
                         subtitle: Column(
@@ -241,7 +242,6 @@ class _ListaEsperaPageState extends State<ListaEsperaPage> {
                                ),
                           ],
                         ),
-                        // --- ÍCONE DE LIXEIRA AGORA É UM BOTÃO ---
                         trailing: IconButton(
                           icon: const Icon(Icons.delete_outline, color: Colors.red),
                           tooltip: 'Remover da lista',
