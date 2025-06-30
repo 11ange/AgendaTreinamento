@@ -11,7 +11,6 @@ class PacientesPage extends StatefulWidget {
 }
 
 class _PacientesPageState extends State<PacientesPage> {
-  
   // Função para calcular a idade
   int _calculateAge(DateTime birthDate) {
     final today = DateTime.now();
@@ -23,21 +22,29 @@ class _PacientesPageState extends State<PacientesPage> {
     return age;
   }
 
-  Future<void> _showAddOrEditPacienteDialog({String? docId, Map<String, dynamic>? initialData}) async {
+  Future<void> _showAddOrEditPacienteDialog(
+      {String? docId, Map<String, dynamic>? initialData}) async {
     final formKey = GlobalKey<FormState>();
     final isEditing = docId != null;
 
     final nomeController = TextEditingController(text: initialData?['nome'] ?? '');
-    final dataNascimentoController = TextEditingController(text: initialData?['dataNascimento'] ?? '');
-    final nomeResponsavelController = TextEditingController(text: initialData?['nomeResponsavel'] ?? '');
-    final telefoneResponsavelController = TextEditingController(text: initialData?['telefoneResponsavel'] ?? '');
-    final emailResponsavelController = TextEditingController(text: initialData?['emailResponsavel'] ?? '');
-    final observacoesController = TextEditingController(text: initialData?['observacoes'] ?? '');
+    final dataNascimentoController =
+        TextEditingController(text: initialData?['dataNascimento'] ?? '');
+    final nomeResponsavelController =
+        TextEditingController(text: initialData?['nomeResponsavel'] ?? '');
+    final telefoneResponsavelController =
+        TextEditingController(text: initialData?['telefoneResponsavel'] ?? '');
+    final emailResponsavelController =
+        TextEditingController(text: initialData?['emailResponsavel'] ?? '');
+    final observacoesController =
+        TextEditingController(text: initialData?['observacoes'] ?? '');
     String? afinandoCerebroValue = initialData?['afinandoCerebro'];
-    
+
     int? calculatedAge;
-    if (initialData?['dataNascimento'] != null && initialData!['dataNascimento'].isNotEmpty) {
-      final birthDate = DateFormat('dd/MM/yyyy').parse(initialData['dataNascimento']);
+    if (initialData?['dataNascimento'] != null &&
+        initialData!['dataNascimento'].isNotEmpty) {
+      final birthDate =
+          DateFormat('dd/MM/yyyy').parse(initialData['dataNascimento']);
       calculatedAge = _calculateAge(birthDate);
     }
 
@@ -57,18 +64,22 @@ class _PacientesPageState extends State<PacientesPage> {
                     children: [
                       TextFormField(
                         controller: nomeController,
-                        decoration: const InputDecoration(labelText: 'Nome do Paciente'),
-                        validator: (v) => (v == null || v.isEmpty) ? 'Campo obrigatório' : null,
+                        decoration:
+                            const InputDecoration(labelText: 'Nome do Paciente'),
+                        validator: (v) =>
+                            (v == null || v.isEmpty) ? 'Campo obrigatório' : null,
                       ),
                       TextFormField(
                         controller: dataNascimentoController,
-                        decoration: const InputDecoration(labelText: 'Data de Nascimento', hintText: 'DD/MM/AAAA'),
+                        decoration: const InputDecoration(
+                            labelText: 'Data de Nascimento', hintText: 'DD/MM/AAAA'),
                         readOnly: true,
-                        validator: (v) => (v == null || v.isEmpty) ? 'Campo obrigatório' : null,
+                        validator: (v) =>
+                            (v == null || v.isEmpty) ? 'Campo obrigatório' : null,
                         onTap: () async {
                           // Esconde o teclado antes de abrir o date picker
                           FocusScope.of(context).requestFocus(FocusNode());
-                          
+
                           DateTime? pickedDate = await showDatePicker(
                             context: context,
                             initialDate: DateTime.now(),
@@ -79,7 +90,8 @@ class _PacientesPageState extends State<PacientesPage> {
                           if (pickedDate != null) {
                             // Atualiza o controller e a idade na tela
                             setStateInDialog(() {
-                              dataNascimentoController.text = DateFormat('dd/MM/yyyy').format(pickedDate);
+                              dataNascimentoController.text =
+                                  DateFormat('dd/MM/yyyy').format(pickedDate);
                               calculatedAge = _calculateAge(pickedDate);
                             });
                           }
@@ -92,32 +104,42 @@ class _PacientesPageState extends State<PacientesPage> {
                           alignment: Alignment.centerLeft,
                           child: Text(
                             'Idade: $calculatedAge anos',
-                            style: TextStyle(color: Colors.grey.shade700, fontStyle: FontStyle.italic),
+                            style: TextStyle(
+                                color: Colors.grey.shade700,
+                                fontStyle: FontStyle.italic),
                           ),
                         ),
                       const SizedBox(height: 8),
                       TextFormField(
                         controller: nomeResponsavelController,
-                        decoration: const InputDecoration(labelText: 'Nome do Responsável'),
-                        validator: (v) => (v == null || v.isEmpty) ? 'Campo obrigatório' : null,
+                        decoration:
+                            const InputDecoration(labelText: 'Nome do Responsável'),
+                        validator: (v) =>
+                            (v == null || v.isEmpty) ? 'Campo obrigatório' : null,
                       ),
                       TextFormField(
                         controller: telefoneResponsavelController,
-                        decoration: const InputDecoration(labelText: 'Telefone do Responsável'),
+                        decoration: const InputDecoration(
+                            labelText: 'Telefone do Responsável'),
                         keyboardType: TextInputType.phone,
                       ),
                       TextFormField(
                         controller: emailResponsavelController,
-                        decoration: const InputDecoration(labelText: 'Email do Responsável'),
+                        decoration: const InputDecoration(
+                            labelText: 'Email do Responsável'),
                         keyboardType: TextInputType.emailAddress,
                       ),
                       DropdownButtonFormField<String>(
                         value: afinandoCerebroValue,
-                        decoration: const InputDecoration(labelText: 'Afinando o Cérebro'),
+                        decoration:
+                            const InputDecoration(labelText: 'Afinando o Cérebro'),
                         items: const [
-                          DropdownMenuItem(value: 'Não enviado', child: Text('Não enviado')),
-                          DropdownMenuItem(value: 'Enviado', child: Text('Enviado')),
-                          DropdownMenuItem(value: 'Cadastrado', child: Text('Cadastrado')),
+                          DropdownMenuItem(
+                              value: 'Não enviado', child: Text('Não enviado')),
+                          DropdownMenuItem(
+                              value: 'Enviado', child: Text('Enviado')),
+                          DropdownMenuItem(
+                              value: 'Cadastrado', child: Text('Cadastrado')),
                         ],
                         onChanged: (String? newValue) {
                           setStateInDialog(() {
@@ -136,10 +158,12 @@ class _PacientesPageState extends State<PacientesPage> {
                 ),
               ),
               actions: [
-                TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancelar')),
+                TextButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: const Text('Cancelar')),
                 ElevatedButton(
                   onPressed: () async {
-                    if(formKey.currentState!.validate()){
+                    if (formKey.currentState!.validate()) {
                       final pacienteData = {
                         'nome': nomeController.text,
                         'idade': calculatedAge,
@@ -151,13 +175,18 @@ class _PacientesPageState extends State<PacientesPage> {
                         'observacoes': observacoesController.text,
                       };
 
-                      if(isEditing){
-                        await FirebaseFirestore.instance.collection('pacientes').doc(docId).update(pacienteData);
+                      if (isEditing) {
+                        await FirebaseFirestore.instance
+                            .collection('pacientes')
+                            .doc(docId)
+                            .update(pacienteData);
                       } else {
                         pacienteData['dataCadastro'] = Timestamp.now();
-                        await FirebaseFirestore.instance.collection('pacientes').add(pacienteData);
+                        await FirebaseFirestore.instance
+                            .collection('pacientes')
+                            .add(pacienteData);
                       }
-                      if(mounted) Navigator.of(context).pop();
+                      if (mounted) Navigator.of(context).pop();
                     }
                   },
                   child: const Text('Salvar'),
@@ -176,7 +205,8 @@ class _PacientesPageState extends State<PacientesPage> {
       builder: (BuildContext context) {
         return AlertDialog(
           title: const Text('Confirmar Exclusão'),
-          content: const Text('Tem certeza que deseja excluir este paciente?'),
+          content: const Text(
+              'Tem certeza que deseja excluir este paciente? Esta ação não pode ser desfeita.'),
           actions: <Widget>[
             TextButton(
               onPressed: () => Navigator.of(context).pop(false),
@@ -184,7 +214,8 @@ class _PacientesPageState extends State<PacientesPage> {
             ),
             TextButton(
               onPressed: () => Navigator.of(context).pop(true),
-              child: const Text('Sim'),
+              child: const Text('Sim, Excluir'),
+              style: TextButton.styleFrom(foregroundColor: Colors.red),
             ),
           ],
         );
@@ -193,18 +224,21 @@ class _PacientesPageState extends State<PacientesPage> {
 
     if (confirmDelete == true) {
       try {
-        await FirebaseFirestore.instance.collection('pacientes').doc(documentId).delete();
-        if(mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
+        await FirebaseFirestore.instance
+            .collection('pacientes')
+            .doc(documentId)
+            .delete();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Paciente excluído com sucesso.')),
           );
         }
       } catch (e) {
-         if(mounted) {
-           ScaffoldMessenger.of(context).showSnackBar(
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('Erro ao excluir paciente: $e')),
           );
-         }
+        }
       }
     }
   }
@@ -213,7 +247,7 @@ class _PacientesPageState extends State<PacientesPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(45.0), 
+        preferredSize: const Size.fromHeight(45.0),
         child: AppBar(
           title: const Text('Pacientes'),
           centerTitle: true,
@@ -222,7 +256,7 @@ class _PacientesPageState extends State<PacientesPage> {
       ),
       body: Column(
         children: [
-           Padding(
+          Padding(
             padding: const EdgeInsets.all(16.0),
             child: SizedBox(
               width: double.infinity,
@@ -236,10 +270,14 @@ class _PacientesPageState extends State<PacientesPage> {
           const Divider(),
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
-              stream: FirebaseFirestore.instance.collection('pacientes').orderBy('nome').snapshots(),
+              stream: FirebaseFirestore.instance
+                  .collection('pacientes')
+                  .orderBy('nome')
+                  .snapshots(),
               builder: (context, snapshot) {
                 if (snapshot.hasError) {
-                  return Center(child: Text('Ocorreu um erro: ${snapshot.error}'));
+                  return Center(
+                      child: Text('Ocorreu um erro: ${snapshot.error}'));
                 }
 
                 if (snapshot.connectionState == ConnectionState.waiting) {
@@ -247,7 +285,8 @@ class _PacientesPageState extends State<PacientesPage> {
                 }
 
                 if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                  return const Center(child: Text('Nenhum paciente cadastrado.'));
+                  return const Center(
+                      child: Text('Nenhum paciente cadastrado.'));
                 }
 
                 return ListView(
@@ -255,14 +294,18 @@ class _PacientesPageState extends State<PacientesPage> {
                     final data = doc.data() as Map<String, dynamic>;
                     final pacienteNome = data['nome'] ?? 'Nome não informado';
                     return Card(
-                      margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 6.0),
+                      margin: const EdgeInsets.symmetric(
+                          horizontal: 16.0, vertical: 6.0),
                       child: ListTile(
-                        title: Text(pacienteNome, style: const TextStyle(fontWeight: FontWeight.bold)),
+                        title: Text(pacienteNome,
+                            style: const TextStyle(fontWeight: FontWeight.bold)),
                         subtitle: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('Responsável: ${data['nomeResponsavel'] ?? 'N/A'}'),
-                            Text('Telefone: ${data['telefoneResponsavel'] ?? 'N/A'}'),
+                            Text(
+                                'Responsável: ${data['nomeResponsavel'] ?? 'N/A'}'),
+                            Text(
+                                'Telefone: ${data['telefoneResponsavel'] ?? 'N/A'}'),
                           ],
                         ),
                         onTap: () {
@@ -276,10 +319,23 @@ class _PacientesPageState extends State<PacientesPage> {
                             ),
                           );
                         },
-                        trailing: IconButton(
-                          icon: const Icon(Icons.edit_note, color: Colors.blueGrey),
-                          tooltip: 'Editar Cadastro do Paciente',
-                          onPressed: () => _showAddOrEditPacienteDialog(docId: doc.id, initialData: data),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.edit_note,
+                                  color: Colors.blueGrey),
+                              tooltip: 'Editar Cadastro do Paciente',
+                              onPressed: () => _showAddOrEditPacienteDialog(
+                                  docId: doc.id, initialData: data),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.delete_outline,
+                                  color: Colors.red),
+                              tooltip: 'Excluir Paciente',
+                              onPressed: () => _deletePaciente(doc.id),
+                            ),
+                          ],
                         ),
                       ),
                     );
