@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:cloud_firestore/cloud_firestore.dart'; // Importar Firestore
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class AgendaSemanalPage extends StatefulWidget {
   const AgendaSemanalPage({super.key});
@@ -11,15 +11,15 @@ class AgendaSemanalPage extends StatefulWidget {
 
 class _AgendaSemanalPageState extends State<AgendaSemanalPage> {
   Map<String, List<String>> _horariosFixosPorDia = {};
-  Map<String, Set<String>> _horariosAtivosPorDia = {}; // Usa Set para horários ativos
+  Map<String, Set<String>> _horariosAtivosPorDia = {};
 
-  final String _agendaDocId = 'minha_agenda'; // ID do documento no Firestore
+  final String _agendaDocId = 'minha_agenda';
 
   @override
   void initState() {
     super.initState();
     _gerarHorariosFixos();
-    _carregarAgendaDoFirebase(); // Carrega a agenda ao iniciar a tela
+    _carregarAgendaDoFirebase();
   }
 
   void _gerarHorariosFixos() {
@@ -41,7 +41,6 @@ class _AgendaSemanalPageState extends State<AgendaSemanalPage> {
           hora = hora.replacing(hour: hora.hour + 1, minute: 0);
         }
       }
-      // Garante que 17:30 seja incluído se o loop parar antes
       if (!_horariosFixosPorDia[dia]!.contains('17:30')) {
         _horariosFixosPorDia[dia]!.add('17:30');
       }
@@ -58,21 +57,18 @@ class _AgendaSemanalPageState extends State<AgendaSemanalPage> {
       if (doc.exists && doc.data() != null) {
         final data = doc.data() as Map<String, dynamic>;
         setState(() {
-          _horariosAtivosPorDia.clear(); // Limpa o estado atual antes de carregar
+          _horariosAtivosPorDia.clear();
           for (var dia in _horariosFixosPorDia.keys) {
-            // Inicializa com um Set vazio se o dia não existir no Firestore
             _horariosAtivosPorDia[dia] = Set<String>();
             if (data.containsKey(dia)) {
               final List<dynamic>? firestoreHorarios = data[dia];
               if (firestoreHorarios != null) {
-                // Adiciona apenas horários que são strings
                 _horariosAtivosPorDia[dia]!.addAll(firestoreHorarios.map((e) => e.toString()));
               }
             }
           }
         });
       } else {
-        // Se o documento não existe, inicializa com todos os horários desmarcados
         _inicializarHorariosAtivosVazios();
       }
     } catch (e) {
@@ -80,7 +76,7 @@ class _AgendaSemanalPageState extends State<AgendaSemanalPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Erro ao carregar agenda: $e')),
       );
-      _inicializarHorariosAtivosVazios(); // Garante estado inicial vazio em caso de erro
+      _inicializarHorariosAtivosVazios();
     }
   }
 
@@ -110,7 +106,6 @@ class _AgendaSemanalPageState extends State<AgendaSemanalPage> {
 
   Future<void> _salvarAgenda() async {
     try {
-      // Converte o Set<String> para List<String> para salvar no Firestore
       Map<String, List<String>> agendaParaSalvar = {};
       _horariosAtivosPorDia.forEach((dia, horariosSet) {
         agendaParaSalvar[dia] = horariosSet.toList();
@@ -119,7 +114,7 @@ class _AgendaSemanalPageState extends State<AgendaSemanalPage> {
       await FirebaseFirestore.instance
           .collection('disponibilidade')
           .doc(_agendaDocId)
-          .set(agendaParaSalvar, SetOptions(merge: true)); // Use merge para não sobrescrever o documento inteiro
+          .set(agendaParaSalvar, SetOptions(merge: true));
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Agenda salva com sucesso!')),
@@ -140,66 +135,69 @@ class _AgendaSemanalPageState extends State<AgendaSemanalPage> {
         child: AppBar(
           title: const Text('Horários de Atendimento'),
           centerTitle: true,
-          backgroundColor: Colors.blue, // Cor de fundo da AppBar
+          backgroundColor: Colors.blue,
         ),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: <Widget>[
-            Expanded(
-              child: ListView(
-                children: _horariosFixosPorDia.keys.map((dia) {
-                  return Card(
-                    margin: const EdgeInsets.symmetric(vertical: 8.0),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: <Widget>[
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: <Widget>[
-                              Text(dia, style: const TextStyle(fontWeight: FontWeight.bold)),
-                              TextButton(
-                                onPressed: () => _limparHorariosDia(dia),
-                                child: const Text('Limpar', style: TextStyle(color: Colors.red)),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 10),
-                          Wrap(
-                            spacing: 8.0,
-                            runSpacing: 4.0,
-                            children: _horariosFixosPorDia[dia]!.map((horario) {
-                              final ativo = _horariosAtivosPorDia[dia]?.contains(horario) ?? false;
-                              return FilterChip(
-                                label: Text(horario),
-                                selected: ativo,
-                                onSelected: (bool selected) {
-                                  _alterarAtividadeHorario(dia, horario, selected);
-                                },
-                              );
-                            }).toList(),
-                          ),
-                        ],
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+        children: _horariosFixosPorDia.keys.map((dia) {
+          return Card(
+            margin: const EdgeInsets.symmetric(vertical: 8.0),
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: <Widget>[
+                      Text(dia, style: const TextStyle(fontWeight: FontWeight.bold)),
+                      TextButton(
+                        onPressed: () => _limparHorariosDia(dia),
+                        child: const Text('Limpar', style: TextStyle(color: Colors.red)),
                       ),
-                    ),
-                  );
-                }).toList(),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  // =======================================================================
+                  // ALTERAÇÃO: Substituindo o Wrap por um GridView.count
+                  // =======================================================================
+                  GridView.count(
+                    crossAxisCount: 3, // Define 3 colunas
+                    crossAxisSpacing: 8.0, // Espaçamento horizontal
+                    mainAxisSpacing: 4.0, // Espaçamento vertical
+                    childAspectRatio: 2.5, // Proporção do botão (largura / altura)
+                    shrinkWrap: true, // Para o GridView caber dentro do ListView
+                    physics: const NeverScrollableScrollPhysics(), // Impede a rolagem do GridView
+                    children: _horariosFixosPorDia[dia]!.map((horario) {
+                      final ativo = _horariosAtivosPorDia[dia]?.contains(horario) ?? false;
+                      return FilterChip(
+                        label: Text(horario),
+                        selected: ativo,
+                        onSelected: (bool selected) {
+                          _alterarAtividadeHorario(dia, horario, selected);
+                        },
+                      );
+                    }).toList(),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 20),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: _salvarAgenda,
-                child: const Text('Salvar Agenda'),
-              ),
-            ),
-          ],
-        ),
+          );
+        }).toList(),
       ),
+      persistentFooterButtons: [
+        Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: _salvarAgenda,
+              child: const Text('Salvar Agenda'),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
