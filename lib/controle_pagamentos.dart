@@ -41,15 +41,17 @@ class _ControlePagamentosPageState extends State<ControlePagamentosPage> {
       final Map<String, String> horaAgrupada = {};
 
       for (var doc in snapshot.docs) {
-        if (!doc.exists || !doc.data().containsKey('sessoes')) continue;
+        if (!doc.exists) continue;
+        final docData = doc.data() as Map<String, dynamic>?;
+        if(docData == null || !docData.containsKey('sessoes')) continue;
         
         final dataDaSessao = DateFormat('yyyy-MM-dd').parse(doc.id);
-        final sessoesDoDia = doc.data()['sessoes'] as Map<String, dynamic>;
+        final sessoesDoDia = docData['sessoes'] as Map<String, dynamic>;
 
         sessoesDoDia.forEach((hora, sessaoData) {
           final sessao = SessaoAgendada.fromMap(sessaoData as Map<String, dynamic>);
           
-          if ((sessao.status == 'Agendada' || sessao.status == 'Desmarcada') && sessao.agendamentoId.isNotEmpty) {
+          if ((sessao.status == 'Agendada' || sessao.status == 'Realizada' || sessao.status == 'Faltou' || sessao.status == 'Desmarcada') && sessao.agendamentoId.isNotEmpty) {
             final sessaoComData = SessaoComData(sessao, dataDaSessao);
 
             horaAgrupada.putIfAbsent(sessao.agendamentoId, () => hora);
@@ -250,7 +252,11 @@ class _ControlePagamentosPageState extends State<ControlePagamentosPage> {
     );
   }
 
-  Future<void> _showSessaoUnicaPopup(SessaoAgendada sessao) async {
+  // ASSINATURA DA FUNÇÃO MODIFICADA
+  Future<void> _showSessaoUnicaPopup(SessaoComData sessaoComData) async {
+    final sessao = sessaoComData.sessao; // Acessa a sessão
+    final dataSessao = sessaoComData.data; // Acessa a data
+
     final bool isPaga = sessao.statusPagamento == 'Pago';
     final dataPagamentoController = TextEditingController(
       text: isPaga && sessao.dataPagamentoSessao != null
@@ -302,6 +308,7 @@ class _ControlePagamentosPageState extends State<ControlePagamentosPage> {
                     await _firestoreService.cancelarPagamentoSessaoUnica(
                       sessao: sessao,
                       hora: _horaPorAgendamento[sessao.agendamentoId]!,
+                      data: dataSessao, // PASSANDO O PARÂMETRO 'data'
                     );
                     Navigator.of(context).pop();
                     _carregarSessoes();
@@ -320,6 +327,7 @@ class _ControlePagamentosPageState extends State<ControlePagamentosPage> {
                     sessao: sessao,
                     dataPagamento: Timestamp.fromDate(data),
                     hora: _horaPorAgendamento[sessao.agendamentoId]!,
+                    data: dataSessao, // PASSANDO O PARÂMETRO 'data'
                   );
                   Navigator.of(context).pop();
                   _carregarSessoes();
@@ -338,7 +346,6 @@ class _ControlePagamentosPageState extends State<ControlePagamentosPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Controle de Pagamentos'),
-        backgroundColor: Colors.blue, // Cor de fundo da AppBar
         centerTitle: true,
       ),
       body: _isLoading
@@ -358,9 +365,7 @@ class _ControlePagamentosPageState extends State<ControlePagamentosPage> {
                       final dataInicio = sessoesComData.first.data;
                       final dataFim = sessoesComData.last.data;
                       final formatoData = DateFormat('dd/MM/yy', 'pt_BR');
-                      // =======================================================================
-                      // LÓGICA ADICIONADA: Captura a hora do agendamento
-                      // =======================================================================
+                      
                       final horaAgendamento = _horaPorAgendamento[agendamentoId] ?? '';
                       final periodo = '${formatoData.format(dataInicio)} - ${formatoData.format(dataFim)} às $horaAgendamento';
 
@@ -460,7 +465,8 @@ class _ControlePagamentosPageState extends State<ControlePagamentosPage> {
                              final isDesmarcada = sessao.status == 'Desmarcada';
 
                             return ListTile(
-                              onTap: isDesmarcada ? null : () => _showSessaoUnicaPopup(sessao),
+                              // CHAMADA DA FUNÇÃO MODIFICADA
+                              onTap: isDesmarcada ? null : () => _showSessaoUnicaPopup(sessaoComData),
                               tileColor: isDesmarcada ? Colors.grey.shade300 : null,
                               title: Text(
                                 'Sessão ${sessao.sessaoNumero} - $dataFormatada',

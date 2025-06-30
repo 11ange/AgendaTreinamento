@@ -36,12 +36,11 @@ class _EvolucaoPacientePageState extends State<EvolucaoPacientePage> {
       final sessoes =
           await _firestoreService.getSessoesPorPaciente(widget.pacienteId);
 
-      // Ordena os agendamentos pela data de início da primeira sessão (mais recente primeiro)
       final sortedEntries = sessoes.entries.toList()
         ..sort((a, b) {
           final dataA = a.value.first.data;
           final dataB = b.value.first.data;
-          return dataB.compareTo(dataA);
+          return dataB.compareTo(dataA); // Mais recentes primeiro
         });
 
       setState(() {
@@ -58,34 +57,6 @@ class _EvolucaoPacientePageState extends State<EvolucaoPacientePage> {
     }
   }
 
-  Future<void> _atualizarStatusSessao(
-      SessaoComData sessaoComData, String novoStatus) async {
-    final confirmar = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Confirmar Alteração'),
-        content: Text('Deseja alterar o status desta sessão para "$novoStatus"?'),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('Não')),
-          TextButton(
-              onPressed: () => Navigator.of(context).pop(true),
-              child: const Text('Sim')),
-        ],
-      ),
-    );
-
-    if (confirmar == true) {
-      await _firestoreService.updateStatusSessao(
-        data: sessaoComData.data,
-        agendamentoId: sessaoComData.sessao.agendamentoId,
-        novoStatus: novoStatus,
-      );
-      _carregarSessoesDoPaciente(); // Recarrega para refletir a alteração
-    }
-  }
-
   Future<void> _editarObservacoes(SessaoComData sessaoComData) async {
     final observacoesController =
         TextEditingController(text: sessaoComData.sessao.observacoes);
@@ -93,7 +64,7 @@ class _EvolucaoPacientePageState extends State<EvolucaoPacientePage> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: Text('Observações da Sessão'),
+          title: const Text('Observações da Sessão'),
           content: TextField(
             controller: observacoesController,
             decoration: const InputDecoration(labelText: 'Digite suas anotações'),
@@ -129,7 +100,6 @@ class _EvolucaoPacientePageState extends State<EvolucaoPacientePage> {
     return Scaffold(
       appBar: AppBar(
         title: Text('Evolução de ${widget.pacienteNome}'),
-        backgroundColor: Colors.blue,
         centerTitle: true,
       ),
       body: _isLoading
@@ -137,83 +107,71 @@ class _EvolucaoPacientePageState extends State<EvolucaoPacientePage> {
           : _sessoesPorAgendamento.isEmpty
               ? const Center(
                   child: Text('Nenhuma sessão encontrada para este paciente.'))
-              : ListView(
-                  children: _sessoesPorAgendamento.entries.map((entry) {
-                    final agendamentoId = entry.key;
-                    final sessoes = entry.value;
+              : RefreshIndicator(
+                  onRefresh: _carregarSessoesDoPaciente,
+                  child: ListView(
+                    children: _sessoesPorAgendamento.entries.map((entry) {
+                      final sessoes = entry.value;
+                      final dataInicio = sessoes.first.data;
+                      final dataFim = sessoes.last.data;
+                      final formatoData = DateFormat('dd/MM/yy', 'pt_BR');
+                      final periodo =
+                          '${formatoData.format(dataInicio)} - ${formatoData.format(dataFim)}';
 
-                    final dataInicio = sessoes.first.data;
-                    final dataFim = sessoes.last.data;
-                    final formatoData = DateFormat('dd/MM/yy', 'pt_BR');
-                    final periodo =
-                        '${formatoData.format(dataInicio)} - ${formatoData.format(dataFim)}';
+                      return Card(
+                        margin: const EdgeInsets.symmetric(
+                            horizontal: 16.0, vertical: 8.0),
+                        child: ExpansionTile(
+                          title: Text(periodo),
+                          initiallyExpanded: true,
+                          children: sessoes.map((sessaoComData) {
+                            final sessao = sessaoComData.sessao;
+                            final dataFormatada = DateFormat('dd/MM/yyyy', 'pt_BR')
+                                .format(sessaoComData.data);
 
-                    return Card(
-                      margin: const EdgeInsets.symmetric(
-                          horizontal: 16.0, vertical: 8.0),
-                      child: ExpansionTile(
-                        title: Text(periodo),
-                        initiallyExpanded: true,
-                        children: sessoes.map((sessaoComData) {
-                          final sessao = sessaoComData.sessao;
-                          final dataFormatada =
-                              DateFormat('dd/MM/yyyy', 'pt_BR')
-                                  .format(sessaoComData.data);
+                            Color statusColor;
+                            IconData statusIcon;
+                            String statusText = sessao.status;
 
-                          Color statusColor;
-                          IconData statusIcon;
-                          switch (sessao.status) {
-                            case 'Realizada':
-                              statusColor = Colors.green;
-                              statusIcon = Icons.check_circle;
-                              break;
-                            case 'Faltou':
-                              statusColor = Colors.red;
-                              statusIcon = Icons.cancel;
-                              break;
-                            case 'Desmarcada':
-                              statusColor = Colors.grey;
-                              statusIcon = Icons.info_outline;
-                              break;
-                            default: // Agendada
-                              statusColor = Colors.blue;
-                              statusIcon = Icons.schedule;
-                          }
+                            switch (sessao.status) {
+                              case 'Realizada':
+                                statusColor = Colors.green;
+                                statusIcon = Icons.check_circle;
+                                break;
+                              case 'Faltou':
+                                statusColor = Colors.red;
+                                statusIcon = Icons.cancel;
+                                break;
+                              case 'Falta Injustificada':
+                                statusColor = Colors.orange;
+                                statusIcon = Icons.warning;
+                                break;
+                              default: // Agendada
+                                statusColor = Colors.blue;
+                                statusIcon = Icons.schedule;
+                            }
 
-                          return ListTile(
-                            onTap: () => _editarObservacoes(sessaoComData),
-                            leading: Icon(statusIcon, color: statusColor),
-                            title: Text(
-                                'Sessão ${sessao.sessaoNumero} - $dataFormatada'),
-                            subtitle: sessao.observacoes != null &&
-                                    sessao.observacoes!.isNotEmpty
-                                ? Text(sessao.observacoes!,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis)
-                                : const Text('Sem observações',
-                                    style:
-                                        TextStyle(fontStyle: FontStyle.italic)),
-                            trailing: PopupMenuButton<String>(
-                              onSelected: (value) {
-                                _atualizarStatusSessao(sessaoComData, value);
-                              },
-                              itemBuilder: (BuildContext context) =>
-                                  <PopupMenuEntry<String>>[
-                                const PopupMenuItem<String>(
-                                  value: 'Realizada',
-                                  child: Text('Realizada'),
-                                ),
-                                const PopupMenuItem<String>(
-                                  value: 'Faltou',
-                                  child: Text('Faltou'),
-                                ),
-                              ],
-                            ),
-                          );
-                        }).toList(),
-                      ),
-                    );
-                  }).toList(),
+                            return ListTile(
+                              onTap: () => _editarObservacoes(sessaoComData),
+                              leading: Icon(statusIcon, color: statusColor),
+                              title: Text('Sessão ${sessao.sessaoNumero} - $dataFormatada'),
+                              subtitle: sessao.observacoes != null &&
+                                      sessao.observacoes!.isNotEmpty
+                                  ? Text(sessao.observacoes!,
+                                      maxLines: 1, overflow: TextOverflow.ellipsis)
+                                  : const Text('Toque para adicionar observações',
+                                      style: TextStyle(fontStyle: FontStyle.italic)),
+                              trailing: Text(
+                                statusText,
+                                style: TextStyle(
+                                    color: statusColor, fontWeight: FontWeight.bold),
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                      );
+                    }).toList(),
+                  ),
                 ),
     );
   }
