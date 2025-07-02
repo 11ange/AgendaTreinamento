@@ -633,4 +633,52 @@ class FirestoreService {
     batch.update(ref, desbloqueios);
     await batch.commit();
   }
+    Future<int> getSessoesHojeCount() async {
+    final hojeString = DateFormat('yyyy-MM-dd').format(DateTime.now());
+    final doc = await _db.collection(_sessoesAgendadasCollection).doc(hojeString).get();
+    if (!doc.exists) return 0;
+
+    final data = doc.data() as Map<String, dynamic>;
+    if (data.containsKey('sessoes')) {
+      final sessoes = data['sessoes'] as Map<String, dynamic>;
+      return sessoes.values.where((s) => s['status'] == 'Agendada').length;
+    }
+    return 0;
+  }
+
+  Future<double> getPagamentosPendentesMes() async {
+    // Esta é uma estimativa. Pagamentos por sessão exigem lógica mais complexa
+    // que não está implementada (definir preço por sessão).
+    // Por enquanto, esta função pode servir como placeholder.
+    // Retornando 0 para não mostrar valores incorretos.
+    return 0.0;
+  }
+
+  Future<String> getProximaVagaDisponivel() async {
+    final disponibilidade = await getDisponibilidadePadrao();
+    if (disponibilidade.isEmpty) return "Agenda não definida";
+
+    DateTime diaAtual = DateTime.now();
+    for (int i = 0; i < 90; i++) { // Procura nos próximos 90 dias
+      final nomeDiaSemana = DateFormat('EEEE', 'pt_BR').format(diaAtual).replaceFirstMapped((RegExp(r'^\w')), (match) => match.group(0)!.toUpperCase());
+      final horariosDoDia = disponibilidade[nomeDiaSemana] ?? [];
+
+      if (horariosDoDia.isNotEmpty) {
+        final docId = DateFormat('yyyy-MM-dd').format(diaAtual);
+        final doc = await _db.collection(_sessoesAgendadasCollection).doc(docId).get();
+        final sessoesDoDia = doc.exists ? (doc.data() as Map<String, dynamic>)['sessoes'] as Map<String, dynamic> : {};
+
+        for (var hora in horariosDoDia) {
+          // Se o horário não está na lista de sessões, está vago
+          if (!sessoesDoDia.containsKey(hora)) {
+            final dataFormatada = DateFormat("dd/MM 'às'").format(diaAtual);
+            return "$dataFormatada $hora";
+          }
+        }
+      }
+      diaAtual = diaAtual.add(const Duration(days: 1));
+    }
+    return "Nenhuma vaga encontrada";
+  }
+
 }

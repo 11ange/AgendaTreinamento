@@ -1,5 +1,5 @@
 name: agenda_treinamento_web
-description: "A new Flutter project."
+description: "Agenda de Treinamento - Aplicativo Flutter para gerenciar treinamentos auditivos."
 publish_to: 'none'
 
 version: 1.0.0+1
@@ -20,15 +20,15 @@ dependencies:
   table_calendar: ^3.1.2
 
   # Dependências do Firebase (Conjunto de versões compatíveis)
-  firebase_core: ^2.27.0
-  cloud_firestore: ^4.15.8
-  firebase_auth: ^4.17.8
-  cloud_functions: ^4.6.0
+  firebase_core: ^3.15.0 #^2.27.0
+  cloud_firestore: ^5.6.9 #^4.15.8
+  firebase_auth: ^5.6.0 #^4.17.8
+  cloud_functions: ^5.6.0 #^4.6.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^3.0.0
+  flutter_lints: ^6.0.0 #^3.0.0
 
 flutter:
   uses-material-design: true
