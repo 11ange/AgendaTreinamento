@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:intl/date_symbol_data_local.dart'; // Importe esta linha
-import 'pagina_inicial.dart'; // Importa a página principal
+import 'package:intl/date_symbol_data_local.dart';
+import 'pagina_inicial.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'firebase_options.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-   // Inicialize os dados de formatação de data para o locale 'pt_BR'
   await initializeDateFormatting('pt_BR', null);
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
@@ -24,6 +23,14 @@ class MyApp extends StatelessWidget {
       title: 'Agenda Fonoaudiologia',
       theme: ThemeData(
         primarySwatch: Colors.blue,
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(
+            padding: const EdgeInsets.symmetric(vertical: 16.0),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8.0),
+            ),
+          ),
+        ),
       ),
       localizationsDelegates: const [
         GlobalMaterialLocalizations.delegate,
@@ -31,8 +38,8 @@ class MyApp extends StatelessWidget {
         GlobalCupertinoLocalizations.delegate,
       ],
       supportedLocales: const [
-        Locale('en', ''), // Inglês
-        Locale('pt', 'BR'), // Português do Brasil
+        Locale('en', ''),
+        Locale('pt', 'BR'),
       ],
       home: const LoginPage(),
     );
@@ -47,78 +54,66 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
-  final _usernameController = TextEditingController();
-  final _passwordController = TextEditingController();
+  bool _isLoading = false;
+
+  Future<void> _login() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    // Simula uma pequena espera para dar feedback visual
+    await Future.delayed(const Duration(milliseconds: 500));
+
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (context) => const MainPage()),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(45.0), 
-        child: AppBar(
-          title: const Text('Agenda de Treinamento'),
-          centerTitle: true,
-          backgroundColor: Colors.blue, // Cor de fundo da AppBar
-        ),
-      ),
-      body: Center( // Centraliza o conteúdo na tela
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 400), // Define uma largura máxima
-          child: Container(
-            padding: const EdgeInsets.all(16.0),
-            decoration: BoxDecoration(
-              border: Border.all(color: Colors.grey), // Adiciona uma borda cinza
-              borderRadius: BorderRadius.circular(8.0), // Opcional: bordas arredondadas
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min, // Ajusta a altura da Column ao conteúdo
-              children: <Widget>[
-                TextField(
-                  controller: _usernameController,
-                  decoration: const InputDecoration(
-                    labelText: 'Nome de Usuário',
-                    border: OutlineInputBorder(), // Opcional: adiciona uma borda ao TextField
-                  ),
+      backgroundColor: Colors.grey[100],
+      body: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24.0),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 400),
+            child: Card(
+              elevation: 4.0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12.0),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: <Widget>[
+                    const Icon(
+                      Icons.hearing,
+                      size: 60,
+                      color: Colors.blue,
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'Agenda de Treinamento',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 32),
+                    _isLoading
+                        ? const Center(child: CircularProgressIndicator())
+                        : ElevatedButton(
+                            onPressed: _login,
+                            child: const Text('Entrar'),
+                          ),
+                  ],
                 ),
-                const SizedBox(height: 15),
-                TextField(
-                  controller: _passwordController,
-                  obscureText: true,
-                  decoration: const InputDecoration(
-                    labelText: 'Senha',
-                    border: OutlineInputBorder(), // Opcional: adiciona uma borda ao TextField
-                  ),
-                ),
-                const SizedBox(height: 15),
-                // ---------------------------------------
-                const SizedBox(height: 15),
-                SizedBox( // Envolve o botão para controlar sua largura dentro do Container
-                  width: double.infinity, // Ocupa a largura total do Container
-                  child: ElevatedButton(
-                    onPressed: () {
-                      final username = _usernameController.text;
-                      final password = _passwordController.text;
-
-                      if (username == 'teste' && password == 'teste') {
-                      //if ((username == 'seu_usuario' && password == 'sua_senha') ||
-                      //    (username == 'fono_usuario' && password == 'fono_senha')) {
-                        // Navegar para a MainPage
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (context) => const MainPage()),
-                        );
-                      } else {
-                        print('Credenciais inválidas. Tente novamente.');
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (context) => const MainPage()),
-                        );
-                      }
-                    },
-                    child: const Text('Entrar'),
-                  ),
-                ),
-              ],
+              ),
             ),
           ),
         ),
