@@ -38,19 +38,40 @@ class FirestoreService {
       if (data.containsKey('sessoes')) {
         final sessoes = data['sessoes'] as Map<String, dynamic>;
         for (var sessaoData in sessoes.values) {
-          if (sessaoData['status'] == 'Agendada' || sessaoData['status'] == 'Realizada' || sessaoData['status'] == 'Faltou' || sessaoData['status'] == 'Falta Injustificada') {
+          if (sessaoData['status'] == 'Agendada') {
             pacientesComAgendamento.add(sessaoData['pacienteId']);
           }
         }
       }
     }
 
-    final pacientesSnapshot = await _db.collection(_pacientesCollection).orderBy('nome').get();
+    final pacientesSnapshot = await _db.collection(_pacientesCollection).where('status', isEqualTo: 'ativo').orderBy('nome').get();
     final pacientesDisponiveis = pacientesSnapshot.docs.where((doc) {
       return !pacientesComAgendamento.contains(doc.id);
     }).toList();
     
     return pacientesDisponiveis;
+  }
+
+  // NOVA FUNÇÃO
+  Future<bool> pacienteTemAgendamentoAtivo(String pacienteId) async {
+    final sessoesSnapshot = await _db
+        .collection(_sessoesAgendadasCollection)
+        .where('sessoes', isNotEqualTo: {})
+        .get();
+
+    for (var doc in sessoesSnapshot.docs) {
+      final data = doc.data();
+      if (data.containsKey('sessoes')) {
+        final sessoes = data['sessoes'] as Map<String, dynamic>;
+        for (var sessaoData in sessoes.values) {
+          if (sessaoData['pacienteId'] == pacienteId && sessaoData['status'] == 'Agendada') {
+            return true; // Encontrou agendamento ativo
+          }
+        }
+      }
+    }
+    return false; // Não encontrou
   }
 
   Future<List<Horario>> getHorariosParaDia(

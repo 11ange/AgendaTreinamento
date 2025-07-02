@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 import 'evolucao_paciente.dart';
+import 'pacientes_inativos.dart';
+import 'services/firestore_service.dart'; // Importação que faltava
 
 class PacientesPage extends StatefulWidget {
   const PacientesPage({super.key});
@@ -11,6 +13,8 @@ class PacientesPage extends StatefulWidget {
 }
 
 class _PacientesPageState extends State<PacientesPage> {
+  final FirestoreService _firestoreService = FirestoreService();
+
   // Função para calcular a idade
   int _calculateAge(DateTime birthDate) {
     final today = DateTime.now();
@@ -173,6 +177,7 @@ class _PacientesPageState extends State<PacientesPage> {
                         'emailResponsavel': emailResponsavelController.text,
                         'afinandoCerebro': afinandoCerebroValue,
                         'observacoes': observacoesController.text,
+                        'status': 'ativo', // Garante o status ativo
                       };
 
                       if (isEditing) {
@@ -199,14 +204,23 @@ class _PacientesPageState extends State<PacientesPage> {
     );
   }
 
-  void _deletePaciente(String documentId) async {
-    bool? confirmDelete = await showDialog<bool>(
+  void _inativarPaciente(String documentId, String pacienteNome) async {
+    final agendamentoAtivo = await _firestoreService.pacienteTemAgendamentoAtivo(documentId);
+
+    if(agendamentoAtivo) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Este paciente não pode ser inativado pois possui um agendamento ativo.'), backgroundColor: Colors.red),
+        );
+        return;
+    }
+
+    bool? confirmInactivate = await showDialog<bool>(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text('Confirmar Exclusão'),
+          title: const Text('Confirmar Inativação'),
           content: const Text(
-              'Tem certeza que deseja excluir este paciente? Esta ação não pode ser desfeita.'),
+              'Tem certeza que deseja inativar este paciente?'),
           actions: <Widget>[
             TextButton(
               onPressed: () => Navigator.of(context).pop(false),
@@ -214,7 +228,7 @@ class _PacientesPageState extends State<PacientesPage> {
             ),
             TextButton(
               onPressed: () => Navigator.of(context).pop(true),
-              child: const Text('Sim, Excluir'),
+              child: const Text('Sim, Inativar'),
               style: TextButton.styleFrom(foregroundColor: Colors.red),
             ),
           ],
@@ -222,21 +236,21 @@ class _PacientesPageState extends State<PacientesPage> {
       },
     );
 
-    if (confirmDelete == true) {
+    if (confirmInactivate == true) {
       try {
         await FirebaseFirestore.instance
             .collection('pacientes')
             .doc(documentId)
-            .delete();
+            .update({'status': 'inativo'});
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Paciente excluído com sucesso.')),
+            const SnackBar(content: Text('Paciente inativado com sucesso.')),
           );
         }
       } catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Erro ao excluir paciente: $e')),
+            SnackBar(content: Text('Erro ao inativar paciente: $e')),
           );
         }
       }
@@ -249,7 +263,7 @@ class _PacientesPageState extends State<PacientesPage> {
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(45.0),
         child: AppBar(
-          title: const Text('Pacientes'),
+          title: const Text('Pacientes Ativos'),
           centerTitle: true,
           backgroundColor: Colors.blue,
         ),
@@ -258,13 +272,28 @@ class _PacientesPageState extends State<PacientesPage> {
         children: [
           Padding(
             padding: const EdgeInsets.all(16.0),
-            child: SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: () => _showAddOrEditPacienteDialog(),
-                icon: const Icon(Icons.add),
-                label: const Text('Novo Paciente'),
-              ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () => _showAddOrEditPacienteDialog(),
+                    icon: const Icon(Icons.add),
+                    label: const Text('Novo Paciente'),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) => const PacientesInativosPage()));
+                  },
+                  icon: const Icon(Icons.inventory_2_outlined),
+                  label: const Text('Inativos'),
+                  style: ElevatedButton.styleFrom(backgroundColor: Colors.grey.shade400),
+                ),
+              ],
             ),
           ),
           const Divider(),
@@ -272,6 +301,7 @@ class _PacientesPageState extends State<PacientesPage> {
             child: StreamBuilder<QuerySnapshot>(
               stream: FirebaseFirestore.instance
                   .collection('pacientes')
+                  .where('status', isEqualTo: 'ativo')
                   .orderBy('nome')
                   .snapshots(),
               builder: (context, snapshot) {
@@ -286,7 +316,7 @@ class _PacientesPageState extends State<PacientesPage> {
 
                 if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
                   return const Center(
-                      child: Text('Nenhum paciente cadastrado.'));
+                      child: Text('Nenhum paciente ativo cadastrado.'));
                 }
 
                 return ListView(
@@ -330,10 +360,10 @@ class _PacientesPageState extends State<PacientesPage> {
                                   docId: doc.id, initialData: data),
                             ),
                             IconButton(
-                              icon: const Icon(Icons.delete_outline,
+                              icon: const Icon(Icons.person_off_outlined,
                                   color: Colors.red),
-                              tooltip: 'Excluir Paciente',
-                              onPressed: () => _deletePaciente(doc.id),
+                              tooltip: 'Inativar Paciente',
+                              onPressed: () => _inativarPaciente(doc.id, pacienteNome),
                             ),
                           ],
                         ),
